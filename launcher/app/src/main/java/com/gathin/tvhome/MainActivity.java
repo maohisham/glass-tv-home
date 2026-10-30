@@ -141,6 +141,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView ayatRef, ayatArabic, ayatTranslation, prayerHeader;
     private TextView lblSubuh, lblSyuruk, lblZohor, lblAsar, lblMaghrib, lblIsyak;
     private TextView timeSubuh, timeSyuruk, timeZohor, timeAsar, timeMaghrib, timeIsyak;
+    private TextView prayerCountdownView;
+    private final Runnable secondTick = new Runnable() {
+        @Override public void run() {
+            updatePrayerCountdown();
+            handler.postDelayed(this, 1000L);
+        }
+    };
     private boolean shamsi;
     private String vpnApp;
     private SpringAnimation springX, springY;
@@ -401,6 +408,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             timeAsar = findViewById(R.id.timeAsar);
             timeMaghrib = findViewById(R.id.timeMaghrib);
             timeIsyak = findViewById(R.id.timeIsyak);
+
+            prayerCountdownView = findViewById(R.id.prayerCountdown);
 
             islamicShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
                 if (heroBottom > 0) v.setY(heroBottom - v.getHeight());
@@ -992,6 +1001,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         syncAerialWallpaper();
         startWallpaperRotation();
         handler.postDelayed(minuteTick, MINUTE_MS);
+        handler.removeCallbacks(secondTick);
+        handler.post(secondTick);
         handler.removeCallbacks(cacheClean);
         handler.postDelayed(cacheClean, CacheCleaner.IDLE_MS);
         hiddenSinceResume = false;
@@ -1078,6 +1089,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onPause();
         unregisterReceiver(packageReceiver);
         handler.removeCallbacks(minuteTick);
+        handler.removeCallbacks(secondTick);
         handler.removeCallbacks(wallTick);
         // Nothing of ours stays on screen over another app; an undecided prompt simply returns next time.
         if (cardPrompt != null) cardPrompt.dismiss();
@@ -2094,6 +2106,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         }
+    }
+
+    private void updatePrayerCountdown() {
+        if (prayerCountdownView == null) return;
+        long ms = PrayerTimes.getMsUntilNextPrayer(this);
+        String name = PrayerTimes.getNextPrayerName(this);
+        long totalSecs = ms / 1000;
+        long h = totalSecs / 3600;
+        long m = (totalSecs % 3600) / 60;
+        long s = totalSecs % 60;
+        prayerCountdownView.setText(String.format(Locale.getDefault(),
+                "Next %s in %02d:%02d:%02d", name, h, m, s));
     }
 
     private void updateDateAndPeriod() {

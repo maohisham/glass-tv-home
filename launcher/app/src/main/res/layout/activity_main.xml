@@ -378,6 +378,25 @@
                     android:shadowRadius="4" />
             </LinearLayout>
         </LinearLayout>
+
+        <!-- Next prayer countdown: live HH:MM:SS, updates every second -->
+        <TextView
+            android:id="@+id/prayerCountdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#FF4ADE80"
+            android:textSize="13sp"
+            android:fontFamily="@font/outfit"
+            android:fontVariationSettings="'wght' 700"
+            android:letterSpacing="0.06"
+            android:gravity="end"
+            android:includeFontPadding="false"
+            android:shadowColor="#99000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="3" />
+
         </LinearLayout>
     </LinearLayout>
 

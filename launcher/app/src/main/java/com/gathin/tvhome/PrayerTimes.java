@@ -109,15 +109,12 @@ final class PrayerTimes {
             times = calculateFallback(now);
         }
         long nowMs = now.getTimeInMillis();
-        int nextIdx = -1;
+        // Current prayer: the last obligatory prayer whose time has already passed
+        int currentIdx = -1;
         for (int i = 0; i < times.length; i++) {
-            if (i == 1) continue;
-            if (times[i] > nowMs) {
-                nextIdx = i;
-                break;
-            }
+            if (i == 1) continue; // skip Syuruk
+            if (times[i] <= nowMs) currentIdx = i;
         }
-        if (nextIdx == -1) nextIdx = 0;
 
         SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm", Locale.getDefault());
         PrayerItem[] items = new PrayerItem[6];
@@ -125,7 +122,7 @@ final class PrayerTimes {
             items[i] = new PrayerItem(
                     PRAYER_NAMES[i],
                     timeFmt.format(new Date(times[i])),
-                    i == nextIdx,
+                    i == currentIdx,
                     times[i] < nowMs
             );
         }
@@ -339,6 +336,36 @@ final class PrayerTimes {
         }
         SimpleDateFormat sdf = new SimpleDateFormat("h:mm a", Locale.getDefault());
         return PRAYER_NAMES[nextIdx] + " • " + sdf.format(new Date(times[nextIdx])) + " (Putrajaya)";
+    }
+
+    /** Returns ms remaining until the next obligatory prayer (skipping Syuruk). Handles overnight wrap. */
+    static long getMsUntilNextPrayer(Context context) {
+        Calendar now = Calendar.getInstance();
+        long[] times = getTimesForToday(context, now.get(Calendar.DAY_OF_MONTH));
+        if (times == null || times.length < 6) times = calculateFallback(now);
+        long nowMs = now.getTimeInMillis();
+        for (int i = 0; i < times.length; i++) {
+            if (i == 1) continue; // skip Syuruk
+            if (times[i] > nowMs) return times[i] - nowMs;
+        }
+        // Past Isyak: estimate tomorrow's Subuh
+        Calendar tomorrow = (Calendar) now.clone();
+        tomorrow.add(Calendar.DAY_OF_MONTH, 1);
+        long[] next = calculateFallback(tomorrow);
+        return next[0] - nowMs;
+    }
+
+    /** Returns the name of the next obligatory prayer. */
+    static String getNextPrayerName(Context context) {
+        Calendar now = Calendar.getInstance();
+        long[] times = getTimesForToday(context, now.get(Calendar.DAY_OF_MONTH));
+        if (times == null || times.length < 6) times = calculateFallback(now);
+        long nowMs = now.getTimeInMillis();
+        for (int i = 0; i < times.length; i++) {
+            if (i == 1) continue;
+            if (times[i] > nowMs) return PRAYER_NAMES[i];
+        }
+        return PRAYER_NAMES[0]; // Subuh (tomorrow)
     }
 
     /** Returns Islamic Hijrah date (e.g. "11 Jamadilawal 1448H"). */
