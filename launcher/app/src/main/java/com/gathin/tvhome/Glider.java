@@ -101,8 +101,8 @@ final class Glider extends View {
         float density = context.getResources().getDisplayMetrics().density;
         veil.setColor(0x14FFFFFF);
         rim = new GlassRim(1.5f * density, 0xD9FFFFFF, 0x1AFFFFFF);
-        shadowBlur = 26f * density;
-        shadowDrop = 0f;
+        shadowBlur = 22f * density;
+        shadowDrop = 8f * density;
         Backdrop.watch(this);
         setFocusable(false);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -311,7 +311,7 @@ final class Glider extends View {
             // frame; the right one is made once the shape comes to rest.
             shadowPaint.setColor(0xFFFFFFFF);
             shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
-            area.set(shape.left - pad, shape.top - pad, shape.right + pad, shape.bottom + pad);
+            area.set(shape.left - pad, shape.top - pad + shadowDrop, shape.right + pad, shape.bottom + pad + shadowDrop);
             canvas.drawBitmap(shadow, null, area, shadowPaint);
             return;
         }
@@ -326,7 +326,7 @@ final class Glider extends View {
         }
         shadowPaint.setColor(0xFFFFFFFF);
         shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
-        canvas.drawBitmap(shadow, shape.left - pad, shape.top - pad, shadowPaint);
+        canvas.drawBitmap(shadow, shape.left - pad, shape.top - pad + shadowDrop, shadowPaint);
     }
 
     private void fadeTo(float to, long ms) {
