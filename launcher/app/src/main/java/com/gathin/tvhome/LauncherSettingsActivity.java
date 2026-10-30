@@ -2,6 +2,7 @@ package com.gathin.tvhome;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -11,6 +12,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -85,6 +87,111 @@ public class LauncherSettingsActivity extends Activity {
         addSection(content, "Hidden Apps");
         addHiddenAppsManager(content, new ArrayList<>(cfg.hiddenApps));
 
+        // ── Location ───────────────────────────────────────────────────────
+        addSection(content, "Location");
+        addLocationSetting(content);
+
+    }
+
+    // ── Location setting ───────────────────────────────────────────────────
+
+    private void addLocationSetting(LinearLayout parent) {
+        String name = LocationSettings.getName(this);
+        String mode = !LocationSettings.isCustom(this) ? "Default"
+                : LocationSettings.isManual(this) ? "Manual" : "Auto-detected";
+        LinearLayout row = makeRow(parent, "Weather & Prayer Location", name + "  •  " + mode);
+        row.setOnClickListener(v -> showLocationMenu(row));
+    }
+
+    private void showLocationMenu(LinearLayout row) {
+        new AlertDialog.Builder(this)
+                .setTitle("Location")
+                .setItems(new String[]{"Search city", "Use device location", "Reset to default (" + LocationSettings.DEFAULT_NAME + ")"}, (d, which) -> {
+                    switch (which) {
+                        case 0: showCitySearchDialog(row); break;
+                        case 1: detectDeviceLocation(row); break;
+                        case 2: resetToDefault(row); break;
+                    }
+                })
+                .show();
+    }
+
+    private void showCitySearchDialog(LinearLayout row) {
+        EditText et = new EditText(this);
+        et.setHint("City name, e.g. Kuala Lumpur");
+        et.setTextColor(0xFFEEEEF5);
+        et.setHintTextColor(0xFF808090);
+        et.setSingleLine(true);
+        et.setPadding(48, 24, 48, 24);
+        new AlertDialog.Builder(this)
+                .setTitle("Search City")
+                .setView(et)
+                .setPositiveButton("Search", (d, w) -> {
+                    String q = et.getText().toString().trim();
+                    if (!q.isEmpty()) searchCityAndPick(q, row);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void searchCityAndPick(String query, LinearLayout row) {
+        ProgressDialog progress = new ProgressDialog(this);
+        progress.setMessage("Searching…");
+        progress.setCancelable(false);
+        progress.show();
+        LocationSettings.search(query, results -> {
+            progress.dismiss();
+            if (results.isEmpty()) {
+                new AlertDialog.Builder(this)
+                        .setTitle("No results")
+                        .setMessage("No cities found for \"" + query + "\".")
+                        .setPositiveButton("OK", null).show();
+                return;
+            }
+            String[] names = new String[results.size()];
+            for (int i = 0; i < results.size(); i++) names[i] = results.get(i).toString();
+            new AlertDialog.Builder(this)
+                    .setTitle("Select City")
+                    .setItems(names, (d, which) -> {
+                        LocationSettings.Result r = results.get(which);
+                        LocationSettings.save(this, r, true);
+                        updateSubtitle(row, r.name + "  •  Manual");
+                    })
+                    .show();
+        });
+    }
+
+    @SuppressWarnings("deprecation")
+    private void detectDeviceLocation(LinearLayout row) {
+        ProgressDialog progress = new ProgressDialog(this);
+        progress.setMessage("Detecting location…");
+        progress.setCancelable(false);
+        progress.show();
+        LocationSettings.detectAuto(this, result -> {
+            progress.dismiss();
+            if (result == null) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Location unavailable")
+                        .setMessage("Could not get device location. Try searching for a city instead.")
+                        .setPositiveButton("OK", null).show();
+                return;
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("Use this location?")
+                    .setMessage(result.toString())
+                    .setPositiveButton("Yes", (d, w) -> {
+                        LocationSettings.save(this, result, false);
+                        updateSubtitle(row, result.name + "  •  Auto-detected");
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+    }
+
+    private void resetToDefault(LinearLayout row) {
+        LocationSettings.reset(this);
+        updateSubtitle(row, LocationSettings.DEFAULT_NAME + "  •  Default");
     }
 
     // ── Aerial scene picker ────────────────────────────────────────────────

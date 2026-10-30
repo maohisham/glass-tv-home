@@ -42,10 +42,6 @@ final class WeatherAirQuality {
     private static final String KEY_LAST_UPDATE = "last_update";
     private static final long REFRESH_INTERVAL_MS = 30L * 60 * 1000; // 30 minutes
 
-    // Putrajaya coordinates
-    private static final double LATITUDE = 2.9264;
-    private static final double LONGITUDE = 101.6964;
-
     static class HourlyItem {
         final String time;
         final String icon;
@@ -142,10 +138,13 @@ final class WeatherAirQuality {
                     return; // Cache is still fresh
                 }
 
-                // 1. Fetch Complete Weather
+                double lat = LocationSettings.getLat(context);
+                double lon = LocationSettings.getLon(context);
+
+                // 1. Fetch Complete Weather (timezone=auto lets Open-Meteo handle DST/offset)
                 String weatherUrl = String.format(Locale.ROOT,
-                        "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max&timezone=Asia%%2FKuala_Lumpur&forecast_days=7",
-                        LATITUDE, LONGITUDE);
+                        "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max&timezone=auto&forecast_days=7",
+                        lat, lon);
                 JSONObject wJson = fetchJson(weatherUrl);
 
                 int temp = 29;
@@ -159,7 +158,7 @@ final class WeatherAirQuality {
                 // 2. Fetch Air Quality
                 String aqiUrl = String.format(Locale.ROOT,
                         "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&current=pm2_5,pm10,us_aqi",
-                        LATITUDE, LONGITUDE);
+                        lat, lon);
                 JSONObject aJson = fetchJson(aqiUrl);
 
                 int aqi = 54;
@@ -381,7 +380,7 @@ final class WeatherAirQuality {
         SimpleDateFormat sdf = new SimpleDateFormat("h:mm a", Locale.getDefault());
         String updated = sdf.format(new Date());
 
-        return new FullWeather("PUTRAJAYA", temp, apparentTemp,
+        return new FullWeather(LocationSettings.getName(context).toUpperCase(Locale.ROOT), temp, apparentTemp,
                 getWeatherCondition(code, isMalay), getWeatherIcon(code),
                 highTemp, lowTemp, humidity, windSpeed, uvIndex, rainChanceToday,
                 sunrise, sunset, aqi, aqiStatus, aqiColor, pm25, pm10, updated, hourly, daily);

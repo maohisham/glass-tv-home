@@ -25,20 +25,16 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Clean Waktu Solat for Putrajaya (JAKIM Zone WLY01).
- * Fetches official JAKIM e-solat timetable, caches locally, and includes
- * an accurate solar-calculation fallback so it never fails offline.
+ * Waktu Solat for the user's configured location (defaults to Putrajaya / JAKIM Zone WLY01).
+ * Fetches official JAKIM e-solat timetable when using the default Malaysia location, and falls
+ * back to an accurate solar calculation for custom locations or when offline.
  */
 final class PrayerTimes {
     private static final String TAG = "TvHome.Prayer";
     private static final String PREFS_NAME = "prayer_times_cache";
-    private static final String KEY_JSON = "takwim_wly01";
-    private static final String KEY_MONTH = "takwim_month";
 
-    // Coordinates for Putrajaya
-    private static final double LATITUDE = 2.9264;
-    private static final double LONGITUDE = 101.6964;
-    private static final double TIMEZONE = 8.0;
+    private static String keyJson(String zone) { return "takwim_" + zone.toLowerCase(); }
+    private static String keyMonth(String zone) { return "takwim_month_" + zone.toLowerCase(); }
 
     private static final String[] PRAYER_NAMES = {"Subuh", "Syuruk", "Zohor", "Asar", "Maghrib", "Isyak"};
     private static final String[] PRAYER_KEYS = {"fajr", "syuruk", "dhuhr", "asr", "maghrib", "isha"};
@@ -46,18 +42,28 @@ final class PrayerTimes {
     private PrayerTimes() {
     }
 
-    /** Refresh timetable in background if needed (once a month / day). */
+    /** Refresh timetable in background if needed (once a month). Uses JAKIM for Malaysian zones. */
     static void syncIfDue(Context context, Runnable onUpdated) {
         new Thread(() -> {
             try {
+                // Resolve the JAKIM zone — detect it now if custom location hasn't been mapped yet.
+                String zone = LocationSettings.getJakimZone(context);
+                if (zone == null && LocationSettings.isCustom(context)) {
+                    double lat = LocationSettings.getLat(context);
+                    double lon = LocationSettings.getLon(context);
+                    zone = LocationSettings.detectJakimZoneSync(lat, lon);
+                    LocationSettings.saveZone(context, zone); // persist (null → non-Malaysian → "")
+                }
+                if (zone == null) return; // non-Malaysian location; solar calc used on next read
+
                 SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
                 Calendar now = Calendar.getInstance();
                 int currentMonth = now.get(Calendar.YEAR) * 100 + (now.get(Calendar.MONTH) + 1);
-                if (prefs.getInt(KEY_MONTH, 0) == currentMonth && prefs.contains(KEY_JSON)) {
-                    return; // already have this month's takwim
+                if (prefs.getInt(keyMonth(zone), 0) == currentMonth && prefs.contains(keyJson(zone))) {
+                    return; // already have this month's takwim for this zone
                 }
 
-                URL url = new URL("https://api.waktusolat.app/v2/solat/WLY01");
+                URL url = new URL("https://api.waktusolat.app/v2/solat/" + zone);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setConnectTimeout(8000);
                 conn.setReadTimeout(8000);
@@ -71,14 +77,14 @@ final class PrayerTimes {
                     reader.close();
 
                     prefs.edit()
-                            .putString(KEY_JSON, sb.toString())
-                            .putInt(KEY_MONTH, currentMonth)
+                            .putString(keyJson(zone), sb.toString())
+                            .putInt(keyMonth(zone), currentMonth)
                             .apply();
 
                     if (onUpdated != null) {
                         new Handler(Looper.getMainLooper()).post(onUpdated);
                     }
-                    Log.i(TAG, "Synced Putrajaya prayer times successfully");
+                    Log.i(TAG, "Synced prayer times from JAKIM zone " + zone);
                 }
             } catch (Exception e) {
                 Log.w(TAG, "Prayer sync offline/failed: " + e.getMessage());
@@ -106,7 +112,7 @@ final class PrayerTimes {
         int day = now.get(Calendar.DAY_OF_MONTH);
         long[] times = getTimesForToday(context, day);
         if (times == null || times.length < 6) {
-            times = calculateFallback(now);
+            times = calculateFallback(now, LocationSettings.getLat(context), LocationSettings.getLon(context), LocationSettings.getTz(context));
         }
         long nowMs = now.getTimeInMillis();
         // Current prayer: the last obligatory prayer whose time has already passed
@@ -136,7 +142,7 @@ final class PrayerTimes {
         long[] times = getTimesForToday(context, day);
 
         if (times == null || times.length < 6) {
-            times = calculateFallback(now);
+            times = calculateFallback(now, LocationSettings.getLat(context), LocationSettings.getLon(context), LocationSettings.getTz(context));
         }
 
         long nowMs = now.getTimeInMillis();
@@ -161,7 +167,7 @@ final class PrayerTimes {
         String nextTime = timeFmt.format(new Date(times[nextIdx]));
 
         int l1Start = sb.length();
-        sb.append("PUTRAJAYA  •  SETERUSNYA: ").append(nextName).append(" ").append(nextTime);
+        sb.append(LocationSettings.getName(context).toUpperCase(Locale.ROOT)).append("  •  SETERUSNYA: ").append(nextName).append(" ").append(nextTime);
         int l1End = sb.length();
         sb.setSpan(new ForegroundColorSpan(0xFFFFFFFF), l1Start, l1End, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         sb.setSpan(new StyleSpan(Typeface.BOLD), l1Start, l1End, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -199,8 +205,10 @@ final class PrayerTimes {
 
     private static long[] getTimesForToday(Context context, int day) {
         try {
+            String zone = LocationSettings.getJakimZone(context);
+            if (zone == null) return null; // non-Malaysian / zone not yet detected
             SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            String jsonStr = prefs.getString(KEY_JSON, null);
+            String jsonStr = prefs.getString(keyJson(zone), null);
             if (jsonStr == null) return null;
 
             JSONObject obj = new JSONObject(jsonStr);
@@ -220,8 +228,8 @@ final class PrayerTimes {
         return null;
     }
 
-    /** Astronomical calculation fallback for Putrajaya. */
-    private static long[] calculateFallback(Calendar cal) {
+    /** Astronomical solar-position prayer time calculation for any coordinates. */
+    private static long[] calculateFallback(Calendar cal, double lat, double lon, double tz) {
         int year = cal.get(Calendar.YEAR);
         int month = cal.get(Calendar.MONTH) + 1;
         int day = cal.get(Calendar.DAY_OF_MONTH);
@@ -239,15 +247,15 @@ final class PrayerTimes {
         double alpha = Math.toDegrees(Math.atan2(Math.cos(Math.toRadians(epsilon)) * Math.sin(Math.toRadians(lambda)), Math.cos(Math.toRadians(lambda)))) / 15.0;
         double delta = Math.toDegrees(Math.asin(Math.sin(Math.toRadians(epsilon)) * Math.sin(Math.toRadians(lambda))));
 
-        double noon = 12.0 + TIMEZONE - (LONGITUDE / 15.0) - (L / 15.0 - alpha);
+        double noon = 12.0 + tz - (lon / 15.0) - (L / 15.0 - alpha);
         if (noon < 0) noon += 24.0;
         if (noon >= 24) noon -= 24.0;
 
-        double fajrHour = noon - sunAngleHour(-20.0, LATITUDE, delta);
-        double sunriseHour = noon - sunAngleHour(-0.833, LATITUDE, delta);
-        double asrHour = noon + asrHour(1, LATITUDE, delta);
-        double sunsetHour = noon + sunAngleHour(-0.833, LATITUDE, delta);
-        double ishaHour = noon + sunAngleHour(-18.0, LATITUDE, delta);
+        double fajrHour = noon - sunAngleHour(-20.0, lat, delta);
+        double sunriseHour = noon - sunAngleHour(-0.833, lat, delta);
+        double asrHour = noon + asrHour(1, lat, delta);
+        double sunsetHour = noon + sunAngleHour(-0.833, lat, delta);
+        double ishaHour = noon + sunAngleHour(-18.0, lat, delta);
 
         // Malaysia standard rounding & +2 min ihtiyat
         double[] hours = {fajrHour + 0.05, sunriseHour, noon + 0.04, asrHour + 0.04, sunsetHour + 0.05, ishaHour + 0.05};
@@ -299,7 +307,7 @@ final class PrayerTimes {
         java.util.List<ScheduleItem> list = new java.util.ArrayList<>();
         Calendar now = Calendar.getInstance();
         long[] times = getTimesForToday(context, now.get(Calendar.DAY_OF_MONTH));
-        if (times == null || times.length < 6) times = calculateFallback(now);
+        if (times == null || times.length < 6) times = calculateFallback(now, LocationSettings.getLat(context), LocationSettings.getLon(context), LocationSettings.getTz(context));
 
         long nowMs = now.getTimeInMillis();
         int nextIdx = -1;
@@ -324,7 +332,7 @@ final class PrayerTimes {
     static String getNextPrayerSummary(Context context) {
         Calendar now = Calendar.getInstance();
         long[] times = getTimesForToday(context, now.get(Calendar.DAY_OF_MONTH));
-        if (times == null || times.length < 6) times = calculateFallback(now);
+        if (times == null || times.length < 6) times = calculateFallback(now, LocationSettings.getLat(context), LocationSettings.getLon(context), LocationSettings.getTz(context));
 
         long nowMs = now.getTimeInMillis();
         int nextIdx = 0;
@@ -335,14 +343,15 @@ final class PrayerTimes {
             }
         }
         SimpleDateFormat sdf = new SimpleDateFormat("h:mm a", Locale.getDefault());
-        return PRAYER_NAMES[nextIdx] + " • " + sdf.format(new Date(times[nextIdx])) + " (Putrajaya)";
+        return PRAYER_NAMES[nextIdx] + " • " + sdf.format(new Date(times[nextIdx])) + " (" + LocationSettings.getName(context) + ")";
     }
 
     /** Returns ms remaining until the next obligatory prayer (skipping Syuruk). Handles overnight wrap. */
     static long getMsUntilNextPrayer(Context context) {
         Calendar now = Calendar.getInstance();
+        double lat = LocationSettings.getLat(context), lon = LocationSettings.getLon(context), tz = LocationSettings.getTz(context);
         long[] times = getTimesForToday(context, now.get(Calendar.DAY_OF_MONTH));
-        if (times == null || times.length < 6) times = calculateFallback(now);
+        if (times == null || times.length < 6) times = calculateFallback(now, lat, lon, tz);
         long nowMs = now.getTimeInMillis();
         for (int i = 0; i < times.length; i++) {
             if (i == 1) continue; // skip Syuruk
@@ -351,7 +360,7 @@ final class PrayerTimes {
         // Past Isyak: estimate tomorrow's Subuh
         Calendar tomorrow = (Calendar) now.clone();
         tomorrow.add(Calendar.DAY_OF_MONTH, 1);
-        long[] next = calculateFallback(tomorrow);
+        long[] next = calculateFallback(tomorrow, lat, lon, tz);
         return next[0] - nowMs;
     }
 
@@ -359,7 +368,7 @@ final class PrayerTimes {
     static String getNextPrayerName(Context context) {
         Calendar now = Calendar.getInstance();
         long[] times = getTimesForToday(context, now.get(Calendar.DAY_OF_MONTH));
-        if (times == null || times.length < 6) times = calculateFallback(now);
+        if (times == null || times.length < 6) times = calculateFallback(now, LocationSettings.getLat(context), LocationSettings.getLon(context), LocationSettings.getTz(context));
         long nowMs = now.getTimeInMillis();
         for (int i = 0; i < times.length; i++) {
             if (i == 1) continue;

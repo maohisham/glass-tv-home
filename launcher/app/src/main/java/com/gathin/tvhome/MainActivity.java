@@ -2084,7 +2084,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (ayatTranslation != null) ayatTranslation.setText(ayat.translation);
 
         if (prayerHeader != null) {
-            prayerHeader.setText("WAKTU SOLAT  •  " + PrayerTimes.getHijriDate().toUpperCase(Locale.ROOT));
+            prayerHeader.setText(LocationSettings.getName(this).toUpperCase(Locale.ROOT)
+                    + "  •  " + PrayerTimes.getHijriDate().toUpperCase(Locale.ROOT));
         }
 
         PrayerTimes.PrayerItem[] items = PrayerTimes.getPrayerItems(this);
