@@ -83,13 +83,13 @@ public class LauncherSettingsActivity extends Activity {
                 cfg.soundVolume, 0, 100,
                 v -> Config.save(cfgDir, "sound_volume", v));
 
-        // ── Hidden Apps ────────────────────────────────────────────────────
-        addSection(content, "Hidden Apps");
-        addHiddenAppsManager(content, new ArrayList<>(cfg.hiddenApps));
-
         // ── Location ───────────────────────────────────────────────────────
         addSection(content, "Location");
         addLocationSetting(content);
+
+        // ── Hidden Apps ────────────────────────────────────────────────────
+        addSection(content, "Hidden Apps");
+        addHiddenAppsManager(content, new ArrayList<>(cfg.hiddenApps));
 
     }
 

@@ -68,9 +68,9 @@ final class Glider extends View {
     private int style = DARK;
     private boolean paneHidden;
     /**
-     * The selected app's drop shadow, drawn by the glass glider behind it: soft and even all round,
-     * where the system's shadow fell mostly below the tile and was trimmed at its sides. Drawn once
-     * per tile size into a bitmap, since a blur cannot be drawn live on this TV's GPU.
+     * The selected app's glow, drawn by the glass glider behind it: a soft white bloom that
+     * spreads evenly around the tile. Drawn once per tile size into a bitmap, since a blur
+     * cannot be drawn live on this TV's GPU.
      */
     private Bitmap shadow;
     private int shadowW, shadowH;
@@ -101,8 +101,8 @@ final class Glider extends View {
         float density = context.getResources().getDisplayMetrics().density;
         veil.setColor(0x14FFFFFF);
         rim = new GlassRim(1.5f * density, 0xD9FFFFFF, 0x1AFFFFFF);
-        shadowBlur = 22f * density;
-        shadowDrop = 8f * density;
+        shadowBlur = 26f * density;
+        shadowDrop = 0f;
         Backdrop.watch(this);
         setFocusable(false);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -307,11 +307,11 @@ final class Glider extends View {
         if (w <= 0 || h <= 0) return;
         int pad = (int) Math.ceil(shadowBlur * 2);
         if (shadow != null && (w != shadowW || h != shadowH) && moving()) {
-            // Changing size mid-glide: stretch the shadow it has rather than blur a new one every
+            // Changing size mid-glide: stretch the glow it has rather than blur a new one every
             // frame; the right one is made once the shape comes to rest.
-            shadowPaint.setColor(0xFF000000);
-            shadowPaint.setAlpha(Math.round(0x9A * opacity * shadowMix));
-            area.set(shape.left - pad, shape.top - pad + shadowDrop, shape.right + pad, shape.bottom + pad + shadowDrop);
+            shadowPaint.setColor(0xFFFFFFFF);
+            shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
+            area.set(shape.left - pad, shape.top - pad, shape.right + pad, shape.bottom + pad);
             canvas.drawBitmap(shadow, null, area, shadowPaint);
             return;
         }
@@ -324,9 +324,9 @@ final class Glider extends View {
             shadowW = w;
             shadowH = h;
         }
-        shadowPaint.setColor(0xFF000000);
-        shadowPaint.setAlpha(Math.round(0x9A * opacity * shadowMix));
-        canvas.drawBitmap(shadow, shape.left - pad, shape.top - pad + shadowDrop, shadowPaint);
+        shadowPaint.setColor(0xFFFFFFFF);
+        shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
+        canvas.drawBitmap(shadow, shape.left - pad, shape.top - pad, shadowPaint);
     }
 
     private void fadeTo(float to, long ms) {
