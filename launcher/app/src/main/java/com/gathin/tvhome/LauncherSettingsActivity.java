@@ -48,18 +48,28 @@ public class LauncherSettingsActivity extends Activity {
         // ── Icons ──────────────────────────────────────────────────────────
         addSection(content, "Icons");
         addIconPackPicker(content, cfg.iconPack);
-        addToggle(content, "Show Wallpaper Info",
+        LinearLayout[] wallpaperInfoRowRef = {null};
+        wallpaperInfoRowRef[0] = addToggle(content, "Show Wallpaper Info",
                 "Show location and description when the wallpaper changes",
                 cfg.showWallpaperInfo,
                 v -> Config.save(cfgDir, "show_wallpaper_info", v));
 
         // ── Wallpaper ──────────────────────────────────────────────────────
         addSection(content, "Wallpaper");
+        LinearLayout[] aerialSceneRowRef = {null};
         addToggle(content, "Aerial Views Video Wallpaper",
                 "Use AerialViews app as animated background",
                 cfg.aerialWallpaper,
-                v -> Config.save(cfgDir, "aerial_wallpaper", v));
-        addAerialScenePicker(content, cfg.aerialScenes);
+                v -> {
+                    Config.save(cfgDir, "aerial_wallpaper", v);
+                    setRowEnabled(wallpaperInfoRowRef[0], !v);
+                    setRowEnabled(aerialSceneRowRef[0], v);
+                });
+        aerialSceneRowRef[0] = addAerialScenePicker(content, cfg.aerialScenes);
+
+        // Apply initial enabled/disabled state based on current aerial wallpaper setting
+        setRowEnabled(wallpaperInfoRowRef[0], !cfg.aerialWallpaper);
+        setRowEnabled(aerialSceneRowRef[0], cfg.aerialWallpaper);
 
         // ── Sleep Timer ────────────────────────────────────────────────────
         addSection(content, "Sleep Timer");
@@ -199,7 +209,7 @@ public class LauncherSettingsActivity extends Activity {
     private static final String[] SCENE_KEYS   = {"beach","city","countryside","nature","sea","space","waterfall"};
     private static final String[] SCENE_LABELS = {"Beach","City","Countryside","Nature","Sea","Space","Waterfall"};
 
-    private void addAerialScenePicker(LinearLayout parent, Set<String> currentScenes) {
+    private LinearLayout addAerialScenePicker(LinearLayout parent, Set<String> currentScenes) {
         boolean[] checked = new boolean[SCENE_KEYS.length];
         for (int i = 0; i < SCENE_KEYS.length; i++)
             checked[i] = currentScenes.isEmpty() || currentScenes.contains(SCENE_KEYS[i]);
@@ -226,6 +236,7 @@ public class LauncherSettingsActivity extends Activity {
                     .setNegativeButton("Cancel", null)
                     .show();
         });
+        return row;
     }
 
     // ── Hidden apps manager ────────────────────────────────────────────────
@@ -292,14 +303,22 @@ public class LauncherSettingsActivity extends Activity {
 
     // ── Toggle row ─────────────────────────────────────────────────────────
 
-    private void addToggle(LinearLayout parent, String title, String subtitle,
-                           boolean initial, Callback<Boolean> onChange) {
+    private LinearLayout addToggle(LinearLayout parent, String title, String subtitle,
+                                   boolean initial, Callback<Boolean> onChange) {
         LinearLayout row = makeRow(parent, title, subtitle);
         Switch sw = new Switch(this);
         sw.setChecked(initial);
         sw.setOnCheckedChangeListener((b, checked) -> onChange.accept(checked));
         row.addView(sw);
         row.setOnClickListener(v -> sw.setChecked(!sw.isChecked()));
+        return row;
+    }
+
+    private void setRowEnabled(LinearLayout row, boolean enabled) {
+        if (row == null) return;
+        row.setAlpha(enabled ? 1f : 0.35f);
+        row.setClickable(enabled);
+        row.setFocusable(enabled);
     }
 
     // ── Icon pack picker ───────────────────────────────────────────────────
