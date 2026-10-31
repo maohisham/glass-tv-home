@@ -1199,6 +1199,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 wallView.setColorFilter(0xFF7A7A7A, android.graphics.PorterDuff.Mode.MULTIPLY);
             }
         }
+        if (aerialPlayer != null) {
+            aerialPlayer.setTintVisible(!fullscreen, duration);
+        }
     }
 
     // ---- glass highlight -------------------------------------------------------------------------

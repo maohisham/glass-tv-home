@@ -38,6 +38,7 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
     private java.util.Set<String> sceneFilter = java.util.Collections.emptySet();
     private boolean usingBundledContent = false;
     private TextureView textureView;
+    private android.view.View tintView;
     private MediaPlayer mediaPlayer;
     private IWallpaperProviderService providerService;
     private List<Wallpaper> wallpapers;
@@ -191,6 +192,11 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
         container.addView(textureView, 0, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        tintView = new android.view.View(ctx);
+        tintView.setBackgroundColor(0x40000000); // ~25% dark tint over the video
+        container.addView(tintView, 1, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         Intent intent = new Intent(BIND_ACTION);
         intent.setComponent(new ComponentName(AERIAL_PACKAGE, AERIAL_SERVICE_CLASS));
         try {
@@ -205,6 +211,11 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
     android.graphics.Bitmap getBitmap() {
         if (textureView == null || !surfaceReady) return null;
         try { return textureView.getBitmap(); } catch (Exception e) { return null; }
+    }
+
+    void setTintVisible(boolean visible, int durationMs) {
+        if (tintView == null) return;
+        tintView.animate().alpha(visible ? 1f : 0f).setDuration(durationMs).start();
     }
 
     void setSceneFilter(java.util.Set<String> scenes) {
@@ -250,6 +261,10 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
             try { ctx.unbindService(connection); } catch (Exception ignored) {}
             bound = false;
         }
+        if (tintView != null && tintView.getParent() != null) {
+            ((ViewGroup) tintView.getParent()).removeView(tintView);
+        }
+        tintView = null;
         if (textureView != null && textureView.getParent() != null) {
             ((ViewGroup) textureView.getParent()).removeView(textureView);
         }
