@@ -870,7 +870,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             wallView.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
             // Photos are bright: dim them so the clock, names and tiles stay readable.
             if (placesMode) wallView.setColorFilter(0xFF7A7A7A, android.graphics.PorterDuff.Mode.MULTIPLY);
-            else if (config != null && config.wallpaperOnline) wallView.setColorFilter(0xFFBFBFBF, android.graphics.PorterDuff.Mode.MULTIPLY);
+            else if (config != null && config.wallpaperOnline) wallView.setColorFilter(0xFFB3B3B3, android.graphics.PorterDuff.Mode.MULTIPLY);
             root.addView(wallView, 0, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
         android.graphics.Bitmap old = wallBitmap;
@@ -1367,7 +1367,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (fullscreen) {
                 wallView.clearColorFilter();
             } else {
-                int tint = placesMode ? 0xFF7A7A7A : 0xFFBFBFBF;
+                int tint = placesMode ? 0xFF7A7A7A : 0xFFB3B3B3;
                 wallView.setColorFilter(tint, android.graphics.PorterDuff.Mode.MULTIPLY);
             }
         }
