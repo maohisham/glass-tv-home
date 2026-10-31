@@ -584,11 +584,11 @@
                         android:gravity="center_vertical">
 
                         <TextView
-                            android:layout_width="16dp"
+                            android:layout_width="28dp"
                             android:layout_height="wrap_content"
                             android:text="CPU"
                             android:textColor="#99FFFFFF"
-                            android:textSize="5sp"
+                            android:textSize="8sp"
                             android:fontFamily="@font/outfit"
                             android:fontVariationSettings="'wght' 600"
                             android:letterSpacing="0.08"
@@ -615,7 +615,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="#CCFFFFFF"
-                            android:textSize="5sp"
+                            android:textSize="8sp"
                             android:fontFamily="@font/outfit"
                             android:fontVariationSettings="'wght' 500"
                             android:includeFontPadding="false"
@@ -633,11 +633,11 @@
                         android:layout_marginTop="5dp">
 
                         <TextView
-                            android:layout_width="16dp"
+                            android:layout_width="28dp"
                             android:layout_height="wrap_content"
                             android:text="MEM"
                             android:textColor="#99FFFFFF"
-                            android:textSize="5sp"
+                            android:textSize="8sp"
                             android:fontFamily="@font/outfit"
                             android:fontVariationSettings="'wght' 600"
                             android:letterSpacing="0.08"
@@ -664,7 +664,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="#CCFFFFFF"
-                            android:textSize="5sp"
+                            android:textSize="8sp"
                             android:fontFamily="@font/outfit"
                             android:fontVariationSettings="'wght' 500"
                             android:includeFontPadding="false"

@@ -147,7 +147,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View memoryBar;
     private TextView cpuText;
     private View cpuBar;
-    private long prevCpuTotal = 0, prevCpuIdle = 0;
     private View memoryWidget;
     private View prayerPill;
     private View leftBlock;
@@ -2164,32 +2163,52 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             memoryBar.setBackgroundColor(statColor(memRatio));
         }
         // ── CPU ───────────────────────────────────────────────────────────
-        if (cpuText != null && cpuBar != null) {
-            float cpuRatio = readCpuRatio();
-            cpuText.setText(Math.round(cpuRatio * 100) + "%");
-            cpuBar.setPivotX(0f);
-            cpuBar.setScaleX(Math.min(1f, Math.max(0f, cpuRatio)));
-            cpuBar.setBackgroundColor(statColor(cpuRatio));
-        }
+        // /proc/stat is blocked on Android 10+; kick off async `top` read
+        refreshCpuAsync();
     }
 
-    private float readCpuRatio() {
-        try {
-            java.io.RandomAccessFile f = new java.io.RandomAccessFile("/proc/stat", "r");
-            String line = f.readLine();
-            f.close();
-            String[] t = line.trim().split("\\s+");
-            long idle = Long.parseLong(t[4]);
-            long total = 0;
-            for (int i = 1; i < t.length; i++) total += Long.parseLong(t[i]);
-            long dIdle = idle - prevCpuIdle;
-            long dTotal = total - prevCpuTotal;
-            prevCpuIdle = idle;
-            prevCpuTotal = total;
-            if (dTotal <= 0) return 0f;
-            return Math.max(0f, Math.min(1f, 1f - (float) dIdle / dTotal));
-        } catch (Exception e) {
-            return 0f;
+    // /proc/stat is blocked for untrusted apps on Android 10+; parse `top` instead.
+    private void refreshCpuAsync() {
+        new Thread(() -> {
+            float ratio = -1f;
+            try {
+                Process p = Runtime.getRuntime().exec(new String[]{"top", "-b", "-n", "1"});
+                java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(p.getInputStream()));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.contains("%cpu") && line.contains("%idle")) {
+                        int total = -1, idle = -1;
+                        for (String part : line.trim().split("\\s+")) {
+                            if (part.endsWith("%cpu")) {
+                                try { total = Integer.parseInt(part.replace("%cpu", "")); } catch (Exception ignored) {}
+                            } else if (part.endsWith("%idle")) {
+                                try { idle = Integer.parseInt(part.replace("%idle", "")); } catch (Exception ignored) {}
+                            }
+                        }
+                        if (total > 0 && idle >= 0)
+                            ratio = Math.min(1f, Math.max(0f, (float)(total - idle) / total));
+                        break;
+                    }
+                }
+                br.close();
+                p.destroy();
+            } catch (Exception ignored) {}
+            final float result = ratio;
+            handler.post(() -> applyCpuResult(result));
+        }, "cpu-reader").start();
+    }
+
+    private void applyCpuResult(float ratio) {
+        if (cpuText == null || cpuBar == null) return;
+        if (ratio < 0) {
+            cpuText.setText("—");
+            cpuBar.setScaleX(0f);
+        } else {
+            cpuText.setText(Math.round(ratio * 100) + "%");
+            cpuBar.setPivotX(0f);
+            cpuBar.setScaleX(ratio);
+            cpuBar.setBackgroundColor(statColor(ratio));
         }
     }
 

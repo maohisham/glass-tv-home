@@ -193,7 +193,7 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         tintView = new android.view.View(ctx);
-        tintView.setBackgroundColor(0x40000000); // ~25% dark tint over the video
+        tintView.setBackgroundColor(0x4D000000); // ~30% dark tint over the video
         container.addView(tintView, 1, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
