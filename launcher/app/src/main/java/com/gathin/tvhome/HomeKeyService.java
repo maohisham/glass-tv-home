@@ -82,6 +82,11 @@ public class HomeKeyService extends AccessibilityService {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         settingsScancodes = getResources().getIntArray(R.array.settings_key_scancodes);
         Log.i(TAG, "HomeKeyService connected");
+        // If the launcher already started a timer before the service connected (e.g. after reboot),
+        // pick it up now so the overlay appears without needing the user to cycle the timer.
+        if (SleepTimer.get().isActive()) {
+            showTimerOverlay();
+        }
     }
 
     @Override
