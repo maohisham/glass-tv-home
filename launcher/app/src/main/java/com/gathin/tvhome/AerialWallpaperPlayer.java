@@ -33,8 +33,14 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
             "com.neilturner.aerialviews.services.projectivy.WallpaperProviderService";
     static final String BIND_ACTION = "tv.projectivy.plugin.WALLPAPER_PROVIDER";
 
+    interface SceneListener {
+        /** Called on the main thread each time a new video starts playing. */
+        void onScene(String title, String location);
+    }
+
     private final Context ctx;
     private final ViewGroup container;
+    private SceneListener sceneListener;
     private java.util.Set<String> sceneFilter = java.util.Collections.emptySet();
     private boolean usingBundledContent = false;
     private TextureView textureView;
@@ -109,6 +115,7 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
             int[] appleIds  = { R.raw.tvos26 };
             List<String> githubUrls = new ArrayList<>();
             List<String> appleUrls  = new ArrayList<>();
+            java.util.Map<String, String> labelMap = new java.util.HashMap<>();
             for (int rawId : githubIds) {
                 try {
                     java.io.InputStream is = ctx.getResources().openRawResource(rawId);
@@ -128,7 +135,11 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
                         String url = a.optString("url-1080-H264", null);
                         if (url == null || url.isEmpty()) url = a.optString("url-1080-SDR", null);
                         if (url == null || url.isEmpty()) url = a.optString("url", null);
-                        if (url != null && !url.isEmpty()) githubUrls.add(url);
+                        if (url != null && !url.isEmpty()) {
+                            githubUrls.add(url);
+                            String label = a.optString("accessibilityLabel", "");
+                            if (!label.isEmpty()) labelMap.put(url, label);
+                        }
                     }
                 } catch (Exception e) {
                     Log.w(TAG, "fetchAppleAerials community resource failed: " + e.getMessage());
@@ -153,7 +164,11 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
                         String url = a.optString("url-1080-H264", null);
                         if (url == null || url.isEmpty()) url = a.optString("url-1080-SDR", null);
                         if (url == null || url.isEmpty()) url = a.optString("url", null);
-                        if (url != null && !url.isEmpty()) appleUrls.add(url);
+                        if (url != null && !url.isEmpty()) {
+                            appleUrls.add(url);
+                            String label = a.optString("accessibilityLabel", "");
+                            if (!label.isEmpty()) labelMap.put(url, label);
+                        }
                     }
                 } catch (Exception e) {
                     Log.w(TAG, "fetchAppleAerials apple resource failed: " + e.getMessage());
@@ -170,6 +185,7 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
                 Wallpaper w = new Wallpaper();
                 w.uri = url;
                 w.mediaType = Wallpaper.MEDIA_TYPE_VIDEO;
+                w.title = labelMap.get(url);
                 aerialWallpapers.add(w);
             }
             retryHandler.post(() -> {
@@ -216,6 +232,10 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
     void setTintVisible(boolean visible, int durationMs) {
         if (tintView == null) return;
         tintView.animate().alpha(visible ? 1f : 0f).setDuration(durationMs).start();
+    }
+
+    void setSceneListener(SceneListener l) {
+        this.sceneListener = l;
     }
 
     void setSceneFilter(java.util.Set<String> scenes) {
@@ -281,6 +301,11 @@ final class AerialWallpaperPlayer implements TextureView.SurfaceTextureListener 
             return;
         }
         notifyEvent(Event.TYPE_DISPLAYED, w.uri);
+        if (sceneListener != null) {
+            String title = w.title != null ? w.title.trim() : "";
+            String location = w.description != null ? w.description.trim() : "";
+            sceneListener.onScene(title, location);
+        }
         playUri(w.uri);
     }
 

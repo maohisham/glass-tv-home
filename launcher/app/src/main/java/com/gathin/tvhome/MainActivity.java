@@ -349,6 +349,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (cfg.aerialWallpaper) {
             aerialActive = true;
             aerialPlayer = new AerialWallpaperPlayer(this, root);
+            aerialPlayer.setSceneListener(this::onAerialScene);
             aerialPlayer.start();
             handler.postDelayed(aerialBackdropTick, AERIAL_BACKDROP_INTERVAL_MS);
         } else {
@@ -379,7 +380,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // bottom edge: every time it is measured, its top is worked out again. Positioning it by
         // the height it happened to have beforehand is what let a tall block run into the dock.
         heroShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
-            if (heroBottom > 0) v.setY(heroBottom - v.getHeight() - HERO_SHELF_EXTRA_DP * density);
+            if (heroBottom > 0) {
+                float extra = (showWallpaperInfo && placeName != null) ? HERO_SHELF_EXTRA_DP * density : 0f;
+                v.setY(heroBottom - v.getHeight() - extra);
+            }
         });
         ampmView = findViewById(R.id.ampm);
         dateView = findViewById(R.id.date);
@@ -1044,6 +1048,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (aerialPlayer == null) {
                 aerialPlayer = new AerialWallpaperPlayer(this, root);
                 aerialPlayer.setSceneFilter(liveCfg.aerialScenes);
+                aerialPlayer.setSceneListener(this::onAerialScene);
                 aerialPlayer.start();
                 handler.removeCallbacks(aerialBackdropTick);
                 handler.postDelayed(aerialBackdropTick, AERIAL_BACKDROP_INTERVAL_MS);
@@ -1465,7 +1470,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (glass != null) glass.setGlowColor(color);
         if (glider != null) glider.setGlowColor(color);
         heroBottom = dockTopInRoot - HERO_GAP_DP * density;
-        float y = heroBottom - heroShelf.getHeight() - HERO_SHELF_EXTRA_DP * density;
+        float extra = usePlaceInfo ? HERO_SHELF_EXTRA_DP * density : 0f;
+        float y = heroBottom - heroShelf.getHeight() - extra;
         boolean changed = !label.contentEquals(heroName.getText());
 
         if (reducedMotion) {
@@ -1642,6 +1648,34 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * Follows the rotation: the shelf names whichever place is on screen. Called after the picture
      * changes, so the words and the picture never disagree.
      */
+    private void onAerialScene(String title, String location) {
+        // For bundled aerials, accessibilityLabel is "City, Country" stored in title; location is "".
+        if (location.isEmpty() && title.contains(",")) {
+            int idx = title.indexOf(',');
+            location = title.substring(idx + 1).trim();
+            title = title.substring(0, idx).trim();
+        }
+        setPlaceDirect(title.isEmpty() ? null : titleCase(title), location, "");
+    }
+
+    private void setPlaceDirect(String title, String country, String overview) {
+        if (title != null && title.isEmpty()) title = null;
+        if (title == null ? placeName == null : title.equals(placeName)) return;
+        placeName = title;
+        placeText = overview != null ? overview : "";
+        placeCountry = country != null ? country : "";
+        if (heroShown && title != null) {
+            final String t = title;
+            final String c = placeCountry;
+            final String o = placeText;
+            heroShelf.animate().cancel();
+            heroShelf.animate().alpha(0f).setDuration(reducedMotion ? 100 : 250).withEndAction(() -> {
+                setHeroText(t, c, o);
+                if (heroShown) heroShelf.animate().alpha(1f).setDuration(reducedMotion ? 120 : 400).start();
+            }).start();
+        }
+    }
+
     private void setPlace(File picture) {
         String[] about = placesMode ? PlaceWallpapers.describe(picture) : OnlineWallpapers.describe(picture);
         String title = about != null ? titleCase(about[0]) : null;
