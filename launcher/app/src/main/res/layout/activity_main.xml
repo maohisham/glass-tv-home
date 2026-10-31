@@ -550,6 +550,111 @@
                 android:shadowRadius="3"
                 android:singleLine="true" />
 
+            <!-- Now Playing card: appears below weather when media is active -->
+            <LinearLayout
+                android:id="@+id/nowPlayingCard"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/weatherAirQuality"
+                android:layout_alignParentStart="true"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_prayer_pill"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:visibility="gone">
+
+                <!-- Album art — tap/select to launch the media app -->
+                <ImageButton
+                    android:id="@+id/nowPlayingArt"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:scaleType="centerCrop"
+                    android:background="@drawable/bg_now_playing_btn"
+                    android:contentDescription="Open app" />
+
+                <!-- Track info -->
+                <LinearLayout
+                    android:layout_width="160dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="6dp">
+
+                    <TextView
+                        android:id="@+id/nowPlayingTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="13sp"
+                        android:fontFamily="@font/outfit"
+                        android:fontVariationSettings="'wght' 600"
+                        android:singleLine="true"
+                        android:ellipsize="marquee"
+                        android:marqueeRepeatLimit="marquee_forever"
+                        android:scrollHorizontally="true"
+                        android:includeFontPadding="false" />
+
+                    <TextView
+                        android:id="@+id/nowPlayingSubtitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#AAFFFFFF"
+                        android:textSize="11sp"
+                        android:fontFamily="@font/outfit"
+                        android:fontVariationSettings="'wght' 400"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:includeFontPadding="false" />
+
+                </LinearLayout>
+
+                <!-- Transport controls (ImageButton has reliable TV focus) -->
+                <ImageButton
+                    android:id="@+id/btnNowPrev"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_skip_previous"
+                    android:scaleType="center"
+                    android:background="@drawable/bg_now_playing_btn"
+                    android:contentDescription="Previous"
+                    android:alpha="0.8" />
+
+                <ImageButton
+                    android:id="@+id/btnNowPlayPause"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_play"
+                    android:scaleType="center"
+                    android:background="@drawable/bg_now_playing_btn"
+                    android:contentDescription="Play/Pause" />
+
+                <ImageButton
+                    android:id="@+id/btnNowNext"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_skip_next"
+                    android:scaleType="center"
+                    android:background="@drawable/bg_now_playing_btn"
+                    android:contentDescription="Next"
+                    android:alpha="0.8" />
+
+                <ImageButton
+                    android:id="@+id/btnNowClose"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_close"
+                    android:scaleType="center"
+                    android:background="@drawable/bg_now_playing_btn"
+                    android:contentDescription="Dismiss"
+                    android:layout_marginStart="4dp"
+                    android:alpha="0.5" />
+
+            </LinearLayout>
+
             <!-- Top Menu Buttons: Strictly in the same row, vertically centered with the clock -->
             <LinearLayout
                 android:id="@+id/topButtons"

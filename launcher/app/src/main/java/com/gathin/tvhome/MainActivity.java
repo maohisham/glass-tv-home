@@ -151,10 +151,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View memoryWidget;
     private View prayerPill;
     private View leftBlock;
+    private View nowPlayingCard;
+    private android.widget.ImageButton nowPlayingArt;
+    private TextView nowPlayingTitle, nowPlayingSubtitle;
+    private android.widget.ImageButton btnNowPlayPause;
+    private boolean nowPlayingDismissed;
     private final Runnable secondTick = new Runnable() {
         @Override public void run() {
             updatePrayerCountdown();
             handler.postDelayed(this, 1000L);
+        }
+    };
+    private final Runnable nowPlayingPoll = new Runnable() {
+        @Override public void run() {
+            NowPlayingManager.refresh(MainActivity.this);
+            handler.postDelayed(this, 3000L);
         }
     };
     private boolean shamsi;
@@ -376,7 +387,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             weatherAirQualityView.setOnKeyListener((v, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
                 if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    focusTile(0);
+                    if (nowPlayingCard != null && nowPlayingCard.getVisibility() == View.VISIBLE) {
+                        handler.post(() -> btnNowPlayPause.requestFocus());
+                    } else {
+                        focusTile(0);
+                    }
                     return true;
                 }
                 if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
@@ -460,7 +475,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     return true;
                 }
                 if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    focusTile(lastFocused % COLUMNS);
+                    if (nowPlayingCard != null && nowPlayingCard.getVisibility() == View.VISIBLE) {
+                        handler.post(() -> btnNowPlayPause.requestFocus());
+                    } else {
+                        focusTile(lastFocused % COLUMNS);
+                    }
                     return true;
                 }
                 if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
@@ -653,14 +672,76 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (svc != null) svc.showTimerOverlay();
         }
 
+        // Now Playing widget
+        nowPlayingCard   = findViewById(R.id.nowPlayingCard);
+        nowPlayingArt    = (android.widget.ImageButton) findViewById(R.id.nowPlayingArt);
+        nowPlayingArt.setOnClickListener(v -> {
+            NowPlayingManager.NowPlayingInfo info = NowPlayingManager.getCurrent();
+            if (info == null) return;
+            String pkg = info.controller.getPackageName();
+            Intent appIntent = getPackageManager().getLaunchIntentForPackage(pkg);
+            if (appIntent != null) {
+                appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(appIntent);
+            }
+        });
+        nowPlayingTitle  = findViewById(R.id.nowPlayingTitle);
+        nowPlayingSubtitle = findViewById(R.id.nowPlayingSubtitle);
+        btnNowPlayPause  = (android.widget.ImageButton) findViewById(R.id.btnNowPlayPause);
+        findViewById(R.id.btnNowPrev).setOnClickListener(v -> {
+            NowPlayingManager.NowPlayingInfo info = NowPlayingManager.getCurrent();
+            if (info != null) info.controller.getTransportControls().skipToPrevious();
+        });
+        btnNowPlayPause.setOnClickListener(v -> {
+            NowPlayingManager.NowPlayingInfo info = NowPlayingManager.getCurrent();
+            if (info == null) return;
+            if (info.isPlaying) info.controller.getTransportControls().pause();
+            else                info.controller.getTransportControls().play();
+        });
+        findViewById(R.id.btnNowNext).setOnClickListener(v -> {
+            NowPlayingManager.NowPlayingInfo info = NowPlayingManager.getCurrent();
+            if (info != null) info.controller.getTransportControls().skipToNext();
+        });
+        findViewById(R.id.btnNowClose).setOnClickListener(v -> {
+            nowPlayingDismissed = true;
+            if (nowPlayingCard != null) nowPlayingCard.setVisibility(View.GONE);
+        });
+        NowPlayingManager.setListener(info -> updateNowPlayingUi(info));
+
+        // D-pad routing for Now Playing controls
+        View.OnKeyListener nowPlayingKeys = (v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                if (weatherAirQualityView != null && weatherAirQualityView.getVisibility() == View.VISIBLE) {
+                    weatherAirQualityView.requestFocus();
+                } else {
+                    btnInputs.requestFocus();
+                }
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                focusTile(lastFocused % COLUMNS);
+                return true;
+            }
+            return false;
+        };
+        nowPlayingArt.setOnKeyListener(nowPlayingKeys);
+        findViewById(R.id.btnNowPrev).setOnKeyListener(nowPlayingKeys);
+        btnNowPlayPause.setOnKeyListener(nowPlayingKeys);
+        findViewById(R.id.btnNowNext).setOnKeyListener(nowPlayingKeys);
+        findViewById(R.id.btnNowClose).setOnKeyListener(nowPlayingKeys);
+
         // Keep focus on the top bar at its ends and at the top: Android's focus finder would otherwise
         // jump to a tile far below when there is nothing in that direction.
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                // Back to the dock tile Up came from, not wherever the focus finder lands.
-                focusTile(lastFocused % COLUMNS);
+                if (nowPlayingCard != null && nowPlayingCard.getVisibility() == View.VISIBLE) {
+                    handler.post(() -> btnNowPlayPause.requestFocus());
+                } else {
+                    focusTile(lastFocused % COLUMNS);
+                }
                 return true;
             }
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
@@ -993,6 +1074,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onStop() {
         hiddenSinceResume = true;
         handler.removeCallbacks(cacheClean);
+        handler.removeCallbacks(nowPlayingPoll);
         super.onStop();
     }
 
@@ -1025,6 +1107,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         handler.post(secondTick);
         handler.removeCallbacks(cacheClean);
         handler.postDelayed(cacheClean, CacheCleaner.IDLE_MS);
+        nowPlayingDismissed = false;
+        handler.removeCallbacks(nowPlayingPoll);
+        handler.postDelayed(nowPlayingPoll, 2000L);
         hiddenSinceResume = false;
     }
 
@@ -2142,6 +2227,26 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         long s = totalSecs % 60;
         prayerCountdownView.setText(String.format(Locale.getDefault(),
                 "Next %s in %02d:%02d:%02d", name, h, m, s));
+    }
+
+    private void updateNowPlayingUi(NowPlayingManager.NowPlayingInfo info) {
+        if (nowPlayingCard == null) return;
+        if (info == null || nowPlayingDismissed) {
+            nowPlayingCard.setVisibility(View.GONE);
+            return;
+        }
+        nowPlayingCard.setVisibility(View.VISIBLE);
+        nowPlayingTitle.setText(info.title);
+        nowPlayingSubtitle.setText(info.subtitle);
+        if (info.art != null) {
+            nowPlayingArt.setImageBitmap(info.art);
+        } else {
+            nowPlayingArt.setImageDrawable(null);
+        }
+        btnNowPlayPause.setImageResource(
+                info.isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
+        // Keep title scrolling when focused
+        nowPlayingTitle.setSelected(true);
     }
 
     private void updateMemoryWidget() {

@@ -148,6 +148,18 @@
             </intent-filter>
         </service>
 
+        <!-- Listens to media notifications so NowPlayingManager can read active MediaSessions.
+             User must grant notification access once in Settings → Apps → Special app access. -->
+        <service
+            android:name=".MediaNotificationListener"
+            android:exported="true"
+            android:label="Glass TV Media"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <!-- The remote's Input button (KEYCODE_TV) opens the input switcher; see InputKeyService. -->
         <service
             android:name=".InputKeyService"
