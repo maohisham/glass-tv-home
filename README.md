@@ -39,7 +39,7 @@ every week.
 
 - **StandBy Ambient Mode & Smart Energy Lifecycle.**
   - **10 Minutes Idle**: Automatically engages an ambient StandBy screensaver with large 110sp numerals, Islamic Hijri calendar, next prayer capsule, and a late-night red monochrome wind-down mode.
-  - **Sleep timer pill**: A moon-icon button in the top bar cycles through preset durations; a countdown overlay appears on screen and the TV turns off when it expires via `GLOBAL_ACTION_LOCK_SCREEN`.
+  - **Sleep timer pill**: A moon-icon button in the top bar cycles through preset durations (15 / 30 / 60 / 120 min); a countdown overlay appears on screen and the TV turns off when it expires via `GLOBAL_ACTION_LOCK_SCREEN`. The timer and its overlay survive a device reboot — if a timer was active before restart, the overlay reappears as soon as the accessibility service reconnects.
 
 - **Hide apps from your home screen.** Long-press any app tile and choose **Hide App** — it disappears from the grid instantly. Restore hidden apps from **Launcher Settings → Hidden Apps** at any time.
 
@@ -48,24 +48,22 @@ every week.
   - **Upload Icon** — use any image from your device as a custom tile icon.
   - **Reset Icon** — restore the app's original icon.
 
-- **Aerial video wallpaper with scene filtering.** Connects to AerialViews for curated aerial footage. When AerialViews isn't available the launcher falls back to its own bundled library of aerial clips. In **Launcher Settings → Wallpaper** you can filter by scene type (Beach, City, Countryside, Nature, Sea, Space, Waterfall) and the new filter applies instantly without waiting for a timeout.
+- **Aerial video wallpaper with scene filtering.** Connects to AerialViews for curated aerial footage. When AerialViews isn't available the launcher falls back to its own bundled library of aerial clips. In **Launcher Settings → Wallpaper** you can filter by scene type (Beach, City, Countryside, Nature, Sea, Space, Waterfall) and the new filter applies instantly without waiting for a timeout. When **Show Wallpaper Info** is on, the location name of the currently playing scene appears on the shelf above the dock.
+
+- **Online 4K wallpapers with collection picker.** Fetches curated high-resolution photos from Pexels and rotates them at a configurable interval. In **Launcher Settings → Wallpaper** choose a collection — Landscape, Architecture, Nature, Urban, Abstract, or Malaysia — and set how often the wallpaper changes (15 min, 30 min, 1 h, 2 h, or 4 h). The Malaysia collection highlights local scenes with Malay place names on the info shelf. Online wallpapers, places, and aerial footage are mutually exclusive; switching to one automatically turns off the others.
 
 - **Keeps itself clean.** Every 15 days, while Home sits idle, the TV clears its app caches, where the Play
   Store leaves gigabytes of download leftovers that can make apps open to a blank screen. No computer needed,
   sign-ins and app data are never touched; the TV asks once to allow it.
 
-- **Glass, like Apple's.** The dock's tray, the top-bar buttons and the menus show the picture behind them
-  softened, with a shine along their edges. Android 10 has no live blur, so the picture is blurred once each
-  time it changes and the glass draws its patch of it. All top-right pills (Network, Sleep Timer, Settings)
-  share the same background, opacity, and focus indicator — a white rim outline visible on any wallpaper.
+- **Glass, like Apple's.** The dock's tray, the top-bar buttons, the menus, and the Waktu Solat, Weather, and Now Playing widgets all show the picture behind them softened, with a dark veil that keeps text readable against any wallpaper. Android 10 has no live blur, so the picture is blurred once each time it changes and every glass surface draws its patch of it. The rim shine is suppressed on the widgets so they sit quietly on screen without visual noise.
 
-- **One selection that glides.** Between apps it is a pane of glass with the app's shadow under it; on the top
-  bar and in the menus it travels as a white rim outline. It glides and changes shape from one to the next, never jumps.
+- **One selection that glides, in your app's colour.** Between apps the highlight is a pane of glass with a soft bloom underneath; on the top bar and in the menus it travels as a white rim outline. It glides and changes shape from one tile to the next, never jumps. The bloom colour adapts to the dominant colour sampled from the focused app's icon, so the glow shifts from amber on Netflix to green on Spotify.
 
 - **Places to visit that renew themselves.** Once a week the TV takes the pictures Bing has shown on its home
   page over the past days — landmarks, landscapes, wildlife — deletes last week's and rotates through them,
-  dimmed so the clock and tiles stay readable. The shelf above the dock names each one, its country and a few
-  lines about it. Pictures with people in them are skipped: by the words in their caption, and by Android's
+  dimmed so the clock and tiles stay readable. The wallpaper info shelf above the dock names each place, its country and a few
+  lines about it; this shelf is positioned slightly higher than the app-name label so it clears the dock cleanly without moving the Waktu Solat widget. Toggle it off in **Launcher Settings → Wallpaper → Show Wallpaper Info** and the shelf falls back to just the focused app's name at the original position. Pictures with people in them are skipped: by the words in their caption, and by Android's
   own face detector on the TV. No key, no account, nothing to set up.
 
 - **Arrange your apps from the remote.** Hold OK on an app for a glass menu with **Move**, **Hide App**, **App Info**, **Change Icon**, and **Upload Icon**.
@@ -96,9 +94,7 @@ every week.
 | ![The glass Inputs menu with HDMI 1 selected](docs/screenshots/inputs.jpg) | ![The clock screensaver: a grey analog dial, the time and the date](docs/screenshots/clock.jpg) |
 | *Inputs, in glass* | *The clock screensaver* |
 
-Still light: on a Xiaomi Mi TV with 1.8 GB of RAM the launcher uses about 80–100 MB and stays there over hours
-of use, one wallpaper is in memory at a time, the week's places take about 2 MB of storage, and nothing runs
-while you are inside an app.
+Still light: on a Xiaomi Mi TV with 1.8 GB of RAM the launcher uses about 80–100 MB and stays there over hours of use. Wallpapers are decoded at the display's native resolution rather than 4K, so a 1080p TV holds ~2 MB per wallpaper instead of ~8 MB; only one is in memory at a time, the week's places take about 2 MB of storage, and nothing runs while you are inside an app. On devices with 1 GB of RAM or a weak GPU, set `"reduced_motion": true` in your theme — this halves the glow-layer count, doubles the aerial backdrop update interval, and snaps glass transitions instead of animating them.
 
 ## Setting it up (Auto with AI or Manual)
 
