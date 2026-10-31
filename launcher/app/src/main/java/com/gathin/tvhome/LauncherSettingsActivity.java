@@ -79,6 +79,33 @@ public class LauncherSettingsActivity extends Activity {
                 cfg.sleepTimerMinutes,
                 v -> Config.save(cfgDir, "sleep_timer_minutes", v));
 
+        // ── Widgets ────────────────────────────────────────────────────────
+        addSection(content, "Widgets");
+        addToggle(content, "Clock",
+                "Show clock on the home screen",
+                cfg.widgetClock,
+                v -> Config.save(cfgDir, "widget_clock", v));
+        addToggle(content, "Weather",
+                "Show weather and air quality pill",
+                cfg.widgetWeather,
+                v -> Config.save(cfgDir, "widget_weather", v));
+        addToggle(content, "Internet",
+                "Show Wi-Fi / network pill",
+                cfg.widgetInternet,
+                v -> Config.save(cfgDir, "widget_internet", v));
+        addToggle(content, "CPU & Memory",
+                "Show CPU and memory usage indicator",
+                cfg.widgetStats,
+                v -> Config.save(cfgDir, "widget_stats", v));
+        addToggle(content, "Waktu Solat",
+                "Show prayer times table",
+                cfg.widgetSolat,
+                v -> Config.save(cfgDir, "widget_solat", v));
+        addToggle(content, "Quran Verse",
+                "Show daily Quran verse",
+                cfg.widgetQuran,
+                v -> Config.save(cfgDir, "widget_quran", v));
+
         // ── Sound ──────────────────────────────────────────────────────────
         addSection(content, "Sound");
         addToggle(content, "Navigation Sound",

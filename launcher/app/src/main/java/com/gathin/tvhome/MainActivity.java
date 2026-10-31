@@ -148,6 +148,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView cpuText;
     private View cpuBar;
     private long prevCpuTotal = 0, prevCpuIdle = 0;
+    private View memoryWidget;
+    private View prayerPill;
+    private View leftBlock;
     private final Runnable secondTick = new Runnable() {
         @Override public void run() {
             updatePrayerCountdown();
@@ -421,6 +424,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             memoryBar = findViewById(R.id.memoryBar);
             cpuText = findViewById(R.id.cpuText);
             cpuBar = findViewById(R.id.cpuBar);
+            prayerPill = findViewById(R.id.prayerPill);
 
             islamicShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
                 if (heroBottom > 0) v.setY(heroBottom - v.getHeight());
@@ -429,6 +433,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         btnWifi = findViewById(R.id.btnWifi);
+        memoryWidget = findViewById(R.id.memoryWidget);
+        leftBlock = findViewById(R.id.leftBlock);
         if (!cfg.showNetworkPill) btnWifi.setVisibility(View.GONE);
         shamsiDate = findViewById(R.id.shamsiDate);
         shamsi = cfg.shamsiDate;
@@ -1009,6 +1015,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         WeatherAirQuality.syncIfDue(this, this::updateWeatherAqi);
         updateIslamicShelf();
         updateMemoryWidget();
+        syncWidgetVisibility();
         updateInputsButton();
         syncAerialWallpaper();
         startWallpaperRotation();
@@ -2184,6 +2191,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } catch (Exception e) {
             return 0f;
         }
+    }
+
+    private void syncWidgetVisibility() {
+        Config c = Config.load(this);
+        setWidget(leftBlock, c.widgetClock);
+        setWidget(weatherAirQualityView, c.widgetWeather);
+        setWidget(btnWifi, c.widgetInternet && c.showNetworkPill);
+        setWidget(memoryWidget, c.widgetStats);
+        setWidget(prayerPill, c.widgetSolat);
+        int quranVis = c.widgetQuran ? View.VISIBLE : View.GONE;
+        if (ayatRef != null) ayatRef.setVisibility(quranVis);
+        if (ayatArabic != null) ayatArabic.setVisibility(quranVis);
+        if (ayatTranslation != null) ayatTranslation.setVisibility(quranVis);
+    }
+
+    private static void setWidget(View v, boolean show) {
+        if (v != null) v.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     private static int statColor(float ratio) {

@@ -148,6 +148,7 @@
 
         <!-- Dark pill background wrapping the Waktu Solat section for readability -->
         <LinearLayout
+            android:id="@+id/prayerPill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"

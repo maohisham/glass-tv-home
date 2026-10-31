@@ -83,6 +83,13 @@ final class Config {
     /** Last-used sleep timer preset in minutes; 0 = off. */
     final int sleepTimerMinutes;
     final boolean showWallpaperInfo;
+    // ── Widget visibility ──────────────────────────────────────────────────
+    final boolean widgetClock;
+    final boolean widgetWeather;
+    final boolean widgetInternet;
+    final boolean widgetStats;
+    final boolean widgetSolat;
+    final boolean widgetQuran;
     /** Whether the overlay file was present and parsed. */
     final boolean overlayApplied;
 
@@ -98,6 +105,8 @@ final class Config {
                    String iconPack, boolean aerialWallpaper, java.util.Set<String> aerialScenes,
                    boolean soundNavEnabled, boolean soundSelectEnabled, int soundVolume,
                    int sleepTimerMinutes, boolean showWallpaperInfo,
+                   boolean widgetClock, boolean widgetWeather, boolean widgetInternet,
+                   boolean widgetStats, boolean widgetSolat, boolean widgetQuran,
                    boolean overlayApplied) {
         this.dockApps = Collections.unmodifiableList(dockApps);
         this.hiddenApps = Collections.unmodifiableList(hiddenApps);
@@ -131,6 +140,12 @@ final class Config {
         this.soundVolume = soundVolume;
         this.sleepTimerMinutes = sleepTimerMinutes;
         this.showWallpaperInfo = showWallpaperInfo;
+        this.widgetClock = widgetClock;
+        this.widgetWeather = widgetWeather;
+        this.widgetInternet = widgetInternet;
+        this.widgetStats = widgetStats;
+        this.widgetSolat = widgetSolat;
+        this.widgetQuran = widgetQuran;
         this.overlayApplied = overlayApplied;
     }
 
@@ -231,13 +246,21 @@ final class Config {
         int soundVolume = json != null ? integer(json, "sound_volume", 80, 0, 100) : 80;
         int sleepTimerMinutes = json != null ? integer(json, "sleep_timer_minutes", 0, 0, 120) : 0;
         boolean showWallpaperInfo = json == null || bool(json, "show_wallpaper_info", true);
+        boolean widgetClock    = json == null || bool(json, "widget_clock",    true);
+        boolean widgetWeather  = json == null || bool(json, "widget_weather",  true);
+        boolean widgetInternet = json == null || bool(json, "widget_internet", true);
+        boolean widgetStats    = json == null || bool(json, "widget_stats",    true);
+        boolean widgetSolat    = json == null || bool(json, "widget_solat",    true);
+        boolean widgetQuran    = json == null || bool(json, "widget_quran",    true);
 
         return new Config(dock, hidden, liveTv, liveTvAction, panelService, panelAction, inputAction,
                 Math.max(1, columns), Math.max(0, rowsBelow), shamsi, moduleCards, reducedMotion,
                 vpn, homeSettings, networkPill, liveTvRow, background, wallpaper, wallpapers, wallpaperIntervalMs,
                 places, wallpaperOnline, wallpaperFeed, cacheCleanDays,
                 iconPack, aerialWallpaper, aerialScenes, soundNavEnabled, soundSelectEnabled, soundVolume,
-                sleepTimerMinutes, showWallpaperInfo, applied);
+                sleepTimerMinutes, showWallpaperInfo,
+                widgetClock, widgetWeather, widgetInternet, widgetStats, widgetSolat, widgetQuran,
+                applied);
     }
 
     /** Reads and parses the overlay; any problem means "no overlay", never a crash on the home screen. */
