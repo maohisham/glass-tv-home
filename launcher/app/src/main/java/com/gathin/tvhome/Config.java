@@ -242,6 +242,7 @@ final class Config {
                 : CacheCleaner.DEFAULT_DAYS;
         String iconPack = json != null ? string(json, "icon_pack", "") : "";
         boolean aerialWallpaper = json != null && bool(json, "aerial_wallpaper", false);
+        if (aerialWallpaper) wallpaperOnline = false;  // aerial takes priority; online never runs while aerial is on
         java.util.Set<String> aerialScenes = new java.util.HashSet<>();
         if (json != null) {
             List<String> sceneList = stringList(json, "aerial_scenes", new ArrayList<>());

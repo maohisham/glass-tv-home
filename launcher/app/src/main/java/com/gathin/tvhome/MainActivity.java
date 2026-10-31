@@ -1039,6 +1039,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         aerialActive = want;
         if (want) {
+            config = liveCfg;
             // Start aerial video wallpaper
             if (aerialPlayer == null) {
                 aerialPlayer = new AerialWallpaperPlayer(this, root);
@@ -1073,6 +1074,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void startWallpaperRotation() {
+        if (aerialActive) return;
         refreshPlacesIfDue();
         refreshOnlineWallpapersIfDue();
         handler.removeCallbacks(wallTick);
@@ -1440,7 +1442,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Below the dock there is no shelf, but the glow still takes this app's colour, so every
             // tile lights the room the same way the dock does.
             hideShelf();
-            showAmbient(adapter.ambientColorAt(position));
+            int tileColor = adapter.ambientColorAt(position);
+            if (glass != null) glass.setGlowColor(tileColor);
+            if (glider != null) glider.setGlowColor(tileColor);
+            showAmbient(tileColor);
             // Scroll just enough so the whole glass (not only the tile) is visible.
             showRect.set(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
             grid.requestChildRectangleOnScreen(item, showRect, reducedMotion);
@@ -1457,6 +1462,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final String desc = usePlaceInfo ? placeText : "";
         final String where = usePlaceInfo ? placeCountry : "";
         int color = adapter.ambientColorAt(position);
+        if (glass != null) glass.setGlowColor(color);
+        if (glider != null) glider.setGlowColor(color);
         heroBottom = dockTopInRoot - HERO_GAP_DP * density;
         float y = heroBottom - heroShelf.getHeight() - HERO_SHELF_EXTRA_DP * density;
         boolean changed = !label.contentEquals(heroName.getText());
@@ -1836,7 +1843,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * back up again.
      */
     private void showAmbient(int color) {
-        // Color tint disabled — ambient glow is always hidden.
+        // Ambient room glow disabled; icon colour drives the GlassView glow instead.
     }
 
     private void hideGlass() {

@@ -78,6 +78,8 @@ final class Glider extends View {
     private final float shadowBlur, shadowDrop;
     /** How far the shadow is shown: it comes in as the glider turns to glass, and goes with the dark. */
     private float shadowMix;
+    /** RGB colour for the shadow bloom; default white. */
+    private int shadowColor = 0xFFFFFFFF;
     private ValueAnimator shadowFade;
     private final List<View> companions = new ArrayList<>();
     /** Per companion, the part of it the shape matters to (in its own coordinates), or null for all of it. */
@@ -233,6 +235,12 @@ final class Glider extends View {
         changed();
     }
 
+    void setGlowColor(int color) {
+        // Strip alpha — the shadow bitmap is ALPHA_8, so only RGB matters here.
+        shadowColor = color | 0xFF000000;
+        changed();
+    }
+
     void hide() {
         arrival = null;
         if (!shown) return;
@@ -309,7 +317,7 @@ final class Glider extends View {
         if (shadow != null && (w != shadowW || h != shadowH) && moving()) {
             // Changing size mid-glide: stretch the glow it has rather than blur a new one every
             // frame; the right one is made once the shape comes to rest.
-            shadowPaint.setColor(0xFFFFFFFF);
+            shadowPaint.setColor(shadowColor);
             shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
             area.set(shape.left - pad, shape.top - pad + shadowDrop, shape.right + pad, shape.bottom + pad + shadowDrop);
             canvas.drawBitmap(shadow, null, area, shadowPaint);
@@ -324,7 +332,7 @@ final class Glider extends View {
             shadowW = w;
             shadowH = h;
         }
-        shadowPaint.setColor(0xFFFFFFFF);
+        shadowPaint.setColor(shadowColor);
         shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
         canvas.drawBitmap(shadow, shape.left - pad, shape.top - pad + shadowDrop, shadowPaint);
     }

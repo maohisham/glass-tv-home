@@ -48,6 +48,11 @@ public class GlassView extends View {
         invalidate();
     }
 
+    void setGlowColor(int color) {
+        glowPaint.setColor(color);
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         float inset = 6f * density;
