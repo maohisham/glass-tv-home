@@ -19,8 +19,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Dynamic 4K dark desktop wallpaper manager.
@@ -33,9 +35,10 @@ final class OnlineWallpapers {
     static final String DIR = "online-wallpapers";
     private static final String PREFS_NAME = "online_wallpapers";
     private static final String PREF_LAST_SYNC = "last_sync_time";
+    private static final String PREF_LAST_CATEGORY = "last_category";
     private static final long REFRESH_INTERVAL_MS = 6L * 60 * 60 * 1000; // 6 hours
-    private static final int MAX_CACHE_FILES = 25;
-    private static final int MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB limit per 4K image
+    private static final int MAX_CACHE_FILES = 150;
+    private static final int MAX_IMAGE_BYTES = 25 * 1024 * 1024; // 25 MB limit per 4K/8K image
 
     static class WallpaperItem {
         final String url;
@@ -122,7 +125,41 @@ final class OnlineWallpapers {
             new WallpaperItem("https://images.unsplash.com/photo-1498084393753-b411b2d26b34?auto=format&fit=crop&w=3840&h=2160&q=80",
                     "Dark Rainy Asphalt", "Glittering light streaks bouncing off wet night streets", "Urban"),
             new WallpaperItem("https://images.unsplash.com/photo-1516214104703-d870798883c5?auto=format&fit=crop&w=3840&h=2160&q=80",
-                    "Dark Foggy Pines", "Serene evergreen trees veiled in thick atmospheric fog", "Forest")
+                    "Dark Foggy Pines", "Serene evergreen trees veiled in thick atmospheric fog", "Forest"),
+
+            // ── Malaysia: Tempat Menarik di Malaysia (Pexels 4K Ultra HD) ──
+            new WallpaperItem("https://images.pexels.com/photos/40168956/pexels-photo-40168956.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Orangutan Rimba Borneo", "Spesies ikonik hidupan liar di kanopi hutan hujan tropika Borneo, khazanah alam semula jadi", "Malaysia_Sabah"),
+            new WallpaperItem("https://images.pexels.com/photos/36767161/pexels-photo-36767161.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Siluet Senja Kuala Lumpur", "Garis langit metropolis ibu negara berlatarkan kilauan warna merah saga dan jingga waktu senja", "Malaysia_WP"),
+            new WallpaperItem("https://images.pexels.com/photos/338416/pexels-photo-338416.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Masjid Putra & Tasik Putrajaya", "Keindahan seni bina kubah merah jambu Masjid Putra membiaskan pantulan anggun di permukaan tasik tenang", "Malaysia_Putrajaya"),
+            new WallpaperItem("https://images.pexels.com/photos/33676568/pexels-photo-33676568.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Puncak Menara Berkembar KLCC", "Menara Berkembar Petronas tersergam megah meredah lautan awan keemasan di ufuk Kuala Lumpur", "Malaysia_WP"),
+            new WallpaperItem("https://images.pexels.com/photos/39690291/pexels-photo-39690291.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Masjid Selat Melaka", "Masjid terapung tersohor di pesisir Selat Melaka disinari gemerlap lampu malam dan langit tembaga", "Malaysia_Melaka"),
+            new WallpaperItem("https://images.pexels.com/photos/33708542/pexels-photo-33708542.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Calet Pergunungan Kundasang", "Kediaman unik di lereng bukit menghijau berlatarbelakangkan udara nyaman banjaran tanah tinggi Sabah", "Malaysia_Sabah"),
+            new WallpaperItem("https://images.pexels.com/photos/14776919/pexels-photo-14776919.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Jalan Berliku Banjaran Titiwangsa", "Laluan berliku meredah rabung pergunungan hijau yang diselimuti kabut tebal waktu fajar", "Malaysia_Pahang"),
+            new WallpaperItem("https://images.pexels.com/photos/5224545/pexels-photo-5224545.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Fajar Lembah Sungai Pahang", "Limpahan cahaya emas mentari pagi menyinari aliran sungai permai dan perkampungan pesisir bukit", "Malaysia_Pahang"),
+            new WallpaperItem("https://images.pexels.com/photos/11643318/pexels-photo-11643318.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Senja Merah Lembah Sungai", "Panorama matahari terbenam membiaskan rona jingga tembaga di sepanjang liku sungai dan bukit bukau", "Malaysia_Pahang"),
+            new WallpaperItem("https://images.pexels.com/photos/28727775/pexels-photo-28727775.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Pesisiran Pantai Tanjung Balau", "Kejernihan air laut membiru dan keunikan tanjung berbatu di Desaru menghadap Laut China Selatan", "Malaysia_Johor"),
+            new WallpaperItem("https://images.pexels.com/photos/38188372/pexels-photo-38188372.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Jambatan Angkat Terengganu", "Seni bina jambatan angkat ikonik Kuala Terengganu bermandikan biasan sinaran matahari terbenam", "Malaysia_Terengganu"),
+            new WallpaperItem("https://images.pexels.com/photos/13890758/pexels-photo-13890758.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Pekan Diraja Kuala Kangsar", "Pemandangan udara bandar warisan permai di tebingan Sungai Perak diapit kehijauan alam tropika", "Malaysia_Perak"),
+            new WallpaperItem("https://images.pexels.com/photos/139974/pexels-photo-139974.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Perahu Nelayan Jalur Gemilang", "Bot nelayan tradisional berlabuh tenang di muara sungai ketika langit senja berona merah jambu", "Malaysia_Terengganu"),
+            new WallpaperItem("https://images.pexels.com/photos/5649468/pexels-photo-5649468.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Masjid Negeri Shah Alam", "Kubah biru tersergam indah dan empat menara bercahaya Masjid Sultan Salahuddin Abdul Aziz Shah pada waktu malam", "Malaysia_Selangor"),
+            new WallpaperItem("https://images.pexels.com/photos/130576/pexels-photo-130576.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Ladang Teh Cameron Highlands", "Hamparan bukit teh hijau beralun segar di bawah langit biru cerah tanah tinggi banjaran Pahang", "Malaysia_Pahang"),
+            new WallpaperItem("https://images.pexels.com/photos/35905094/pexels-photo-35905094.jpeg?auto=compress&cs=tinysrgb&w=3840&h=2160",
+                    "Beca Berhias Warisan Melaka", "Keunikan beca pelancongan berhias bunga dan lagu ceria menelusuri lorong warisan bersejarah bandar raya Melaka", "Malaysia_Melaka")
     };
 
     private OnlineWallpapers() {
@@ -149,6 +186,108 @@ final class OnlineWallpapers {
         }
         Collections.sort(out);
         return out;
+    }
+
+    /** True when itemCat belongs to the selectedCat bucket (handles Malaysia_* sub-categories). */
+    static boolean matchesCategory(String itemCat, String selectedCat) {
+        if (selectedCat == null || selectedCat.isEmpty() || "All".equalsIgnoreCase(selectedCat)) return true;
+        if (itemCat == null) return false;
+        String ic = itemCat.toLowerCase(Locale.ROOT);
+        String sc = selectedCat.toLowerCase(Locale.ROOT);
+        if (sc.startsWith("malaysia_")) return ic.contains(sc.substring("malaysia_".length()));
+        if (sc.equals("malaysia") || sc.equals("malaysia_all")) return ic.contains("malay");
+        if (sc.contains("sky") || sc.contains("arch") || sc.contains("city"))
+            return ic.contains("sky") || ic.contains("arch") || ic.contains("city") || ic.contains("urban");
+        if (sc.contains("nat") || sc.contains("land"))
+            return ic.contains("nat") || ic.contains("land") || ic.contains("mount") || ic.contains("forest") || ic.contains("desert");
+        if (sc.contains("space") || sc.contains("cosmo") || sc.contains("astro"))
+            return ic.contains("space") || ic.contains("astro") || ic.contains("cosmo");
+        if (sc.contains("ocean") || sc.contains("water") || sc.contains("coast"))
+            return ic.contains("ocean") || ic.contains("underwater") || ic.contains("coast");
+        if (sc.contains("minim") || sc.contains("oled") || sc.contains("atmos"))
+            return ic.contains("minim") || ic.contains("oled") || ic.contains("atmos") || ic.contains("weather");
+        if (sc.contains("malay")) return ic.contains("malay");
+        return ic.contains(sc);
+    }
+
+    /** Removes cached files whose category no longer matches the selected one. */
+    static void cleanOutdatedCategoryWallpapers(File d, String category) {
+        if (d == null || !d.exists()) return;
+        Set<String> validHashes = new HashSet<>();
+        for (WallpaperItem item : CURATED_CATALOG) {
+            if (matchesCategory(item.category, category)) validHashes.add(hashFilename(item.url));
+        }
+        File[] files = d.listFiles((dir, name) -> name.endsWith(".jpg"));
+        if (files == null) return;
+        for (File f : files) {
+            String base = f.getName().replace(".jpg", "");
+            if (!validHashes.contains(base)) {
+                String[] desc = describe(f);
+                if (desc != null && desc.length >= 3 && matchesCategory(desc[2], category)) {
+                    f.delete();
+                    File txt = new File(d, base + ".txt");
+                    if (txt.exists()) txt.delete();
+                    Log.i(TAG, "Removed outdated " + category + " wallpaper: " + f.getName());
+                }
+            }
+        }
+    }
+
+    /** Returns only the cached wallpapers that match the selected category. */
+    static List<File> listByCategory(Context ctx, String category) {
+        File d = dir(ctx);
+        if (d != null && d.exists()) cleanOutdatedCategoryWallpapers(d, category);
+        List<File> all = list(ctx);
+        if (category == null || category.equalsIgnoreCase("All")) return all;
+        List<File> filtered = new ArrayList<>();
+        for (File f : all) {
+            String[] desc = describe(f);
+            if (desc != null && desc.length >= 3 && matchesCategory(desc[2], category)) filtered.add(f);
+        }
+        return filtered;
+    }
+
+    /** Downloads all catalog items that match the category. Returns true if any new file was saved. */
+    static boolean syncCategory(Context ctx, String category) {
+        File d = dir(ctx);
+        if (d == null) return false;
+        if (!d.exists() && !d.mkdirs()) return false;
+        cleanOutdatedCategoryWallpapers(d, category);
+        List<WallpaperItem> candidates = new ArrayList<>();
+        for (WallpaperItem item : CURATED_CATALOG) {
+            if (matchesCategory(item.category, category)) candidates.add(item);
+        }
+        if (candidates.isEmpty()) return false;
+        boolean anyDownloaded = false;
+        for (WallpaperItem item : candidates) {
+            String fileName = hashFilename(item.url) + ".jpg";
+            File targetFile = new File(d, fileName);
+            if (targetFile.exists() && targetFile.length() > 50_000) continue;
+            File tempFile = new File(d, fileName + ".tmp");
+            File tempTxt = new File(d, fileName.replace(".jpg", ".txt") + ".tmp");
+            try {
+                if (downloadUrlToFile(item.url, tempFile)) {
+                    String meta = (item.title != null ? item.title : "4K Wallpaper") + "\n"
+                            + (item.description != null ? item.description : "") + "\n"
+                            + (item.category != null ? item.category : category);
+                    try (OutputStream os = new FileOutputStream(tempTxt)) {
+                        os.write(meta.getBytes(StandardCharsets.UTF_8));
+                    }
+                    File finalTxt = new File(d, fileName.replace(".jpg", ".txt"));
+                    if (tempFile.renameTo(targetFile)) {
+                        tempTxt.renameTo(finalTxt);
+                        anyDownloaded = true;
+                        Log.i(TAG, "Saved category wallpaper [" + category + "]: " + item.title);
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Failed downloading " + item.url + ": " + e);
+            } finally {
+                if (tempFile.exists()) tempFile.delete();
+                if (tempTxt.exists()) tempTxt.delete();
+            }
+        }
+        return anyDownloaded;
     }
 
     /** Returns true if sync is needed (empty local pool or refresh interval elapsed). */
@@ -188,11 +327,30 @@ final class OnlineWallpapers {
     }
 
     /**
+     * Clears all cached online wallpapers and resets the sync timer so a fresh
+     * download happens on the next call to {@link #sync}. Call when the user changes
+     * the wallpaper collection so old-category pictures are removed immediately.
+     */
+    static void clearCache(Context ctx) {
+        File d = dir(ctx);
+        if (d == null) return;
+        File[] files = d.listFiles();
+        if (files != null) {
+            for (File f : files) f.delete();
+        }
+        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .remove(PREF_LAST_SYNC)
+                .remove(PREF_LAST_CATEGORY)
+                .apply();
+    }
+
+    /**
      * Synchronizes wallpapers from an online feed or the built-in curated catalog.
      * Downloads on the caller's thread; call from a background thread.
      * Returns true if one or more fresh pictures were added to the local pool.
      */
-    static boolean sync(Context ctx, String feedUrl) {
+    static boolean sync(Context ctx, String feedUrl, String category) {
         File d = dir(ctx);
         if (d == null) return false;
         if (!d.exists() && !d.mkdirs()) return false;
@@ -206,9 +364,15 @@ final class OnlineWallpapers {
             }
         }
 
-        // If no remote items, use the curated catalog
+        // If no remote items, use the curated catalog (filtered by category)
         if (items.isEmpty()) {
-            Collections.addAll(items, CURATED_CATALOG);
+            boolean filterAll = category == null || category.isEmpty() || "All".equalsIgnoreCase(category);
+            for (WallpaperItem item : CURATED_CATALOG) {
+                if (filterAll || category.equalsIgnoreCase(item.category)) {
+                    items.add(item);
+                }
+            }
+            if (items.isEmpty()) Collections.addAll(items, CURATED_CATALOG); // fallback
         }
 
         // Shuffle candidate pool so rotation changes over time
@@ -279,7 +443,7 @@ final class OnlineWallpapers {
             conn = (HttpURLConnection) url.openConnection();
             conn.setConnectTimeout(10_000);
             conn.setReadTimeout(15_000);
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android TV; GlassTV/1.0)");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 GlassTV/2.4");
             conn.setInstanceFollowRedirects(true);
             conn.connect();
 

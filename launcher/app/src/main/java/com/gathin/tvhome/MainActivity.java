@@ -351,7 +351,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             handler.postDelayed(aerialBackdropTick, AERIAL_BACKDROP_INTERVAL_MS);
         } else {
             if (placesMode) wallpapers = PlaceWallpapers.list(this);
-            else if (cfg.wallpaperOnline && wallpapers.isEmpty()) wallpapers = OnlineWallpapers.list(this);
+            else if (cfg.wallpaperOnline) {
+                List<File> byCategory = OnlineWallpapers.listByCategory(this, cfg.wallpaperCategory);
+                if (!byCategory.isEmpty()) wallpapers = byCategory;
+            }
             if (!wallpapers.isEmpty()) showNextWallpaper(false);
             else if (cfg.wallpaper != null && !placesMode) setWallpaper(decodeWallpaper(cfg.wallpaper), false);
         }
@@ -838,6 +841,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             wallView.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
             // Photos are bright: dim them so the clock, names and tiles stay readable.
             if (placesMode) wallView.setColorFilter(0xFF7A7A7A, android.graphics.PorterDuff.Mode.MULTIPLY);
+            else if (config != null && config.wallpaperOnline) wallView.setColorFilter(0xFFBFBFBF, android.graphics.PorterDuff.Mode.MULTIPLY);
             root.addView(wallView, 0, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
         android.graphics.Bitmap old = wallBitmap;
@@ -939,12 +943,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void refreshOnlineWallpapersIfDue() {
         if (config == null || !config.wallpaperOnline || onlineRefreshRunning || !OnlineWallpapers.due(this)) return;
         onlineRefreshRunning = true;
+        final String category = config.wallpaperCategory;
+        final String feedUrl = config.wallpaperFeed;
         new Thread(() -> {
-            boolean changed = OnlineWallpapers.sync(getApplicationContext(), config.wallpaperFeed);
+            boolean changed;
+            if (feedUrl != null && !feedUrl.trim().isEmpty()) {
+                changed = OnlineWallpapers.sync(getApplicationContext(), feedUrl, category);
+            } else {
+                changed = OnlineWallpapers.syncCategory(getApplicationContext(), category);
+            }
             handler.post(() -> {
                 onlineRefreshRunning = false;
-                if (!changed || isDestroyed()) return;
-                List<File> fresh = OnlineWallpapers.list(this);
+                if (isDestroyed()) return;
+                List<File> fresh = OnlineWallpapers.listByCategory(this, category);
                 if (fresh.isEmpty()) return;
                 List<File> combined = new ArrayList<>(config.wallpapers);
                 for (File f : fresh) {
@@ -971,6 +982,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (want && aerialPlayer != null) {
                 aerialPlayer.setSceneFilter(liveCfg.aerialScenes);
                 aerialPlayer.refresh();
+            } else if (!want) {
+                // Aerial still off — pick up any wallpaper settings that changed
+                wallpaperIntervalMs = liveCfg.wallpaperIntervalMs;
+                boolean catChanged = config == null
+                        || !liveCfg.wallpaperCategory.equalsIgnoreCase(config.wallpaperCategory);
+                if (catChanged) {
+                    // Reload online wallpapers filtered by the new category
+                    List<File> catFiles = OnlineWallpapers.listByCategory(this, liveCfg.wallpaperCategory);
+                    if (!catFiles.isEmpty()) {
+                        wallpapers = catFiles;
+                    } else {
+                        // Nothing cached yet — drop stale refs; sync will download fresh
+                        File od = OnlineWallpapers.dir(this);
+                        if (od != null) {
+                            List<File> pruned = new ArrayList<>();
+                            for (File f : wallpapers) {
+                                if (!od.equals(f.getParentFile())) pruned.add(f);
+                            }
+                            wallpapers = pruned;
+                        }
+                    }
+                }
+                config = liveCfg;
             }
             return;
         }
@@ -999,7 +1033,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             wallpaperIntervalMs = liveCfg.wallpaperIntervalMs;
             placesMode = liveCfg.places;
             if (placesMode) wallpapers = PlaceWallpapers.list(this);
-            else if (liveCfg.wallpaperOnline && wallpapers.isEmpty()) wallpapers = OnlineWallpapers.list(this);
+            else if (liveCfg.wallpaperOnline) {
+                List<File> byCategory = OnlineWallpapers.listByCategory(this, liveCfg.wallpaperCategory);
+                if (!byCategory.isEmpty()) wallpapers = byCategory;
+            }
             if (!wallpapers.isEmpty()) showNextWallpaper(false);
             else if (liveCfg.wallpaper != null && !placesMode) setWallpaper(decodeWallpaper(liveCfg.wallpaper), false);
             config = liveCfg;
@@ -1297,11 +1334,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ambient.animate().alpha(0f).setDuration(duration).start();
         }
 
-        if (wallView != null && placesMode) {
+        if (wallView != null && (placesMode || (config != null && config.wallpaperOnline))) {
             if (fullscreen) {
                 wallView.clearColorFilter();
             } else {
-                wallView.setColorFilter(0xFF7A7A7A, android.graphics.PorterDuff.Mode.MULTIPLY);
+                int tint = placesMode ? 0xFF7A7A7A : 0xFFBFBFBF;
+                wallView.setColorFilter(tint, android.graphics.PorterDuff.Mode.MULTIPLY);
             }
         }
         if (aerialPlayer != null) {

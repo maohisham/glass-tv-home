@@ -91,6 +91,8 @@ final class Config {
     final boolean widgetSolat;
     final boolean widgetQuran;
     final boolean widgetNowPlaying;
+    /** Which online wallpaper collection to show; "All" means the full curated catalog. */
+    final String wallpaperCategory;
     /** Whether the overlay file was present and parsed. */
     final boolean overlayApplied;
 
@@ -108,7 +110,7 @@ final class Config {
                    int sleepTimerMinutes, boolean showWallpaperInfo,
                    boolean widgetClock, boolean widgetWeather, boolean widgetInternet,
                    boolean widgetStats, boolean widgetSolat, boolean widgetQuran,
-                   boolean widgetNowPlaying, boolean overlayApplied) {
+                   boolean widgetNowPlaying, String wallpaperCategory, boolean overlayApplied) {
         this.dockApps = Collections.unmodifiableList(dockApps);
         this.hiddenApps = Collections.unmodifiableList(hiddenApps);
         this.liveTvPackage = liveTvPackage;
@@ -148,6 +150,7 @@ final class Config {
         this.widgetSolat = widgetSolat;
         this.widgetQuran = widgetQuran;
         this.widgetNowPlaying = widgetNowPlaying;
+        this.wallpaperCategory = wallpaperCategory != null ? wallpaperCategory : "All";
         this.overlayApplied = overlayApplied;
     }
 
@@ -221,6 +224,7 @@ final class Config {
         boolean places = wallpaperOn && (json == null || bool(json, "places", true));
         String wallpaperFeed = json != null ? string(json, "wallpaper_feed", "") : "";
         boolean wallpaperOnline = wallpaperOn && json != null && (bool(json, "wallpaper_online", false) || !wallpaperFeed.isEmpty());
+        if (wallpaperOnline) places = false;  // online wallpapers take priority over places
         if (dir != null && wallpaperOnline) {
             File onlineDir = OnlineWallpapers.dir(ctx);
             File[] onlinePics = onlineDir != null ? onlineDir.listFiles() : null;
@@ -255,6 +259,7 @@ final class Config {
         boolean widgetSolat      = json == null || bool(json, "widget_solat",       true);
         boolean widgetQuran      = json == null || bool(json, "widget_quran",       true);
         boolean widgetNowPlaying = json == null || bool(json, "widget_now_playing", true);
+        String wallpaperCategory = json != null ? string(json, "wallpaper_category", "All") : "All";
 
         return new Config(dock, hidden, liveTv, liveTvAction, panelService, panelAction, inputAction,
                 Math.max(1, columns), Math.max(0, rowsBelow), shamsi, moduleCards, reducedMotion,
@@ -263,7 +268,7 @@ final class Config {
                 iconPack, aerialWallpaper, aerialScenes, soundNavEnabled, soundSelectEnabled, soundVolume,
                 sleepTimerMinutes, showWallpaperInfo,
                 widgetClock, widgetWeather, widgetInternet, widgetStats, widgetSolat, widgetQuran,
-                widgetNowPlaying, applied);
+                widgetNowPlaying, wallpaperCategory, applied);
     }
 
     /** Reads and parses the overlay; any problem means "no overlay", never a crash on the home screen. */

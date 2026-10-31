@@ -48,15 +48,13 @@ public class LauncherSettingsActivity extends Activity {
         // ── Icons ──────────────────────────────────────────────────────────
         addSection(content, "Icons");
         addIconPackPicker(content, cfg.iconPack);
-        LinearLayout[] wallpaperInfoRowRef = {null};
-        wallpaperInfoRowRef[0] = addToggle(content, "Show Wallpaper Info",
-                "Show location and description when the wallpaper changes",
-                cfg.showWallpaperInfo,
-                v -> Config.save(cfgDir, "show_wallpaper_info", v));
 
         // ── Wallpaper ──────────────────────────────────────────────────────
         addSection(content, "Wallpaper");
+        LinearLayout[] wallpaperInfoRowRef = {null};
         LinearLayout[] aerialSceneRowRef = {null};
+        LinearLayout[] onlineToggleRowRef = {null};
+        LinearLayout[] onlineCollectionRowRef = {null};
         addToggle(content, "Aerial Views Video Wallpaper",
                 "Use AerialViews app as animated background",
                 cfg.aerialWallpaper,
@@ -64,12 +62,30 @@ public class LauncherSettingsActivity extends Activity {
                     Config.save(cfgDir, "aerial_wallpaper", v);
                     setRowEnabled(wallpaperInfoRowRef[0], !v);
                     setRowEnabled(aerialSceneRowRef[0], v);
+                    setRowEnabled(onlineToggleRowRef[0], !v);
+                    setRowEnabled(onlineCollectionRowRef[0], !v && cfg.wallpaperOnline);
                 });
         aerialSceneRowRef[0] = addAerialScenePicker(content, cfg.aerialScenes);
 
-        // Apply initial enabled/disabled state based on current aerial wallpaper setting
+        onlineToggleRowRef[0] = addToggle(content, "Online Wallpapers (Unsplash 4K)",
+                "Download curated 4K photos from the selected collection",
+                cfg.wallpaperOnline,
+                v -> {
+                    Config.save(cfgDir, "wallpaper_online", v);
+                    setRowEnabled(onlineCollectionRowRef[0], v);
+                });
+        onlineCollectionRowRef[0] = addWallpaperCollectionPicker(content, cfg.wallpaperCategory);
+        addWallpaperRotationPicker(content, cfg.wallpaperIntervalMs);
+        wallpaperInfoRowRef[0] = addToggle(content, "Show Wallpaper Info",
+                "Show location and description when the wallpaper changes",
+                cfg.showWallpaperInfo,
+                v -> Config.save(cfgDir, "show_wallpaper_info", v));
+
+        // Apply initial enabled/disabled state based on current settings
         setRowEnabled(wallpaperInfoRowRef[0], !cfg.aerialWallpaper);
         setRowEnabled(aerialSceneRowRef[0], cfg.aerialWallpaper);
+        setRowEnabled(onlineToggleRowRef[0], !cfg.aerialWallpaper);
+        setRowEnabled(onlineCollectionRowRef[0], !cfg.aerialWallpaper && cfg.wallpaperOnline);
 
         // ── Sleep Timer ────────────────────────────────────────────────────
         addSection(content, "Sleep Timer");
@@ -233,6 +249,90 @@ public class LauncherSettingsActivity extends Activity {
     private void resetToDefault(LinearLayout row) {
         LocationSettings.reset(this);
         updateSubtitle(row, LocationSettings.DEFAULT_NAME + "  •  Default");
+    }
+
+    // ── Wallpaper rotation frequency picker ───────────────────────────────
+
+    private static final String[] ROTATION_LABELS = {
+            "Never (only on launch)",
+            "30 seconds",
+            "1 minute",
+            "5 minutes",
+            "15 minutes",
+            "30 minutes",
+            "1 hour",
+            "2 hours"
+    };
+    // Stored in seconds; 0 = never
+    private static final int[] ROTATION_SECONDS = {0, 30, 60, 300, 900, 1800, 3600, 7200};
+
+    private void addWallpaperRotationPicker(LinearLayout parent, long currentIntervalMs) {
+        // Find the closest matching label for the current setting
+        int bestIdx = 5; // default: 30 minutes
+        long bestDiff = Long.MAX_VALUE;
+        for (int i = 0; i < ROTATION_SECONDS.length; i++) {
+            long diff = Math.abs(currentIntervalMs - (long) ROTATION_SECONDS[i] * 1000L);
+            if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+        }
+        if (currentIntervalMs <= 0) bestIdx = 0;
+
+        final int[] sel = {bestIdx};
+        LinearLayout row = makeRow(parent, "Wallpaper Change Frequency", ROTATION_LABELS[bestIdx]);
+        row.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Change Wallpaper Every")
+                .setSingleChoiceItems(ROTATION_LABELS, sel[0], (d, which) -> sel[0] = which)
+                .setPositiveButton("OK", (d, w) -> {
+                    int seconds = ROTATION_SECONDS[sel[0]];
+                    // Save seconds; clear minutes so seconds takes precedence
+                    Config.save(cfgDir, "wallpaper_seconds", seconds);
+                    Config.save(cfgDir, "wallpaper_minutes", 0);
+                    updateSubtitle(row, ROTATION_LABELS[sel[0]]);
+                })
+                .setNegativeButton("Cancel", null)
+                .show());
+    }
+
+    // ── Online wallpaper collection picker ────────────────────────────────
+
+    private static final String[] COLLECTION_LABELS = {
+            "All Collections",
+            "Malaysia",
+            "Space & Cosmos",
+            "Nature & Forests",
+            "City & Architecture",
+            "Atmospheric"
+    };
+    private static final String[] COLLECTION_KEYS = {
+            "All",
+            "Malaysia",
+            "Space",
+            "Nature",
+            "Cityscape",
+            "Atmospheric"
+    };
+
+    private LinearLayout addWallpaperCollectionPicker(LinearLayout parent, String currentCategory) {
+        int currentIdx = 0;
+        for (int i = 0; i < COLLECTION_KEYS.length; i++) {
+            if (COLLECTION_KEYS[i].equalsIgnoreCase(currentCategory)) { currentIdx = i; break; }
+        }
+        final int[] sel = {currentIdx};
+        LinearLayout row = makeRow(parent, "Online Wallpaper Collection", COLLECTION_LABELS[currentIdx]);
+        row.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Select Collection")
+                .setSingleChoiceItems(COLLECTION_LABELS, sel[0], (d, which) -> sel[0] = which)
+                .setPositiveButton("OK", (d, w) -> {
+                    String chosen = COLLECTION_KEYS[sel[0]];
+                    if (!chosen.equalsIgnoreCase(currentCategory)) {
+                        // Clear cache so fresh wallpapers for the new category are downloaded
+                        new Thread(() -> OnlineWallpapers.clearCache(this), "wpclear").start();
+                    }
+                    Config.save(cfgDir, "wallpaper_category", chosen);
+                    updateSubtitle(row, COLLECTION_LABELS[sel[0]]);
+                })
+                .setNegativeButton("Cancel", null)
+                .show());
+        return row;
     }
 
     // ── Aerial scene picker ────────────────────────────────────────────────
