@@ -566,6 +566,114 @@
                     android:text="@string/inputs"
                     android:drawableStart="@drawable/ic_input" />
 
+                <!-- System stats: CPU + MEM -->
+                <LinearLayout
+                    android:id="@+id/memoryWidget"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical">
+
+                    <!-- CPU row -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="16dp"
+                            android:layout_height="wrap_content"
+                            android:text="CPU"
+                            android:textColor="#99FFFFFF"
+                            android:textSize="5sp"
+                            android:fontFamily="@font/outfit"
+                            android:fontVariationSettings="'wght' 600"
+                            android:letterSpacing="0.08"
+                            android:includeFontPadding="false" />
+
+                        <FrameLayout
+                            android:layout_width="36dp"
+                            android:layout_height="2dp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginEnd="3dp">
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="#33FFFFFF" />
+                            <View
+                                android:id="@+id/cpuBar"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="#CC4ADE80" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/cpuText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#CCFFFFFF"
+                            android:textSize="5sp"
+                            android:fontFamily="@font/outfit"
+                            android:fontVariationSettings="'wght' 500"
+                            android:includeFontPadding="false"
+                            android:singleLine="true"
+                            android:gravity="end" />
+
+                    </LinearLayout>
+
+                    <!-- MEM row -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="5dp">
+
+                        <TextView
+                            android:layout_width="16dp"
+                            android:layout_height="wrap_content"
+                            android:text="MEM"
+                            android:textColor="#99FFFFFF"
+                            android:textSize="5sp"
+                            android:fontFamily="@font/outfit"
+                            android:fontVariationSettings="'wght' 600"
+                            android:letterSpacing="0.08"
+                            android:includeFontPadding="false" />
+
+                        <FrameLayout
+                            android:layout_width="36dp"
+                            android:layout_height="2dp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginEnd="3dp">
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="#33FFFFFF" />
+                            <View
+                                android:id="@+id/memoryBar"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="#CC4ADE80" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/memoryText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#CCFFFFFF"
+                            android:textSize="5sp"
+                            android:fontFamily="@font/outfit"
+                            android:fontVariationSettings="'wght' 500"
+                            android:includeFontPadding="false"
+                            android:singleLine="true"
+                            android:gravity="end" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
                 <TextView
                     android:id="@+id/btnWifi"
                     style="@style/TopMenuButton"

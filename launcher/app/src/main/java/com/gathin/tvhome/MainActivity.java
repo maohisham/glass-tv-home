@@ -1,6 +1,7 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -142,6 +143,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView lblSubuh, lblSyuruk, lblZohor, lblAsar, lblMaghrib, lblIsyak;
     private TextView timeSubuh, timeSyuruk, timeZohor, timeAsar, timeMaghrib, timeIsyak;
     private TextView prayerCountdownView;
+    private TextView memoryText;
+    private View memoryBar;
+    private TextView cpuText;
+    private View cpuBar;
+    private long prevCpuTotal = 0, prevCpuIdle = 0;
     private final Runnable secondTick = new Runnable() {
         @Override public void run() {
             updatePrayerCountdown();
@@ -284,6 +290,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateWeatherAqi();
             WeatherAirQuality.syncIfDue(MainActivity.this, MainActivity.this::updateWeatherAqi);
             updateIslamicShelf();
+            updateMemoryWidget();
             refreshPlacesIfDue();
             refreshOnlineWallpapersIfDue();
             checkInactivity();
@@ -410,6 +417,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             timeIsyak = findViewById(R.id.timeIsyak);
 
             prayerCountdownView = findViewById(R.id.prayerCountdown);
+            memoryText = findViewById(R.id.memoryText);
+            memoryBar = findViewById(R.id.memoryBar);
+            cpuText = findViewById(R.id.cpuText);
+            cpuBar = findViewById(R.id.cpuBar);
 
             islamicShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
                 if (heroBottom > 0) v.setY(heroBottom - v.getHeight());
@@ -997,6 +1008,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateWeatherAqi();
         WeatherAirQuality.syncIfDue(this, this::updateWeatherAqi);
         updateIslamicShelf();
+        updateMemoryWidget();
         updateInputsButton();
         syncAerialWallpaper();
         startWallpaperRotation();
@@ -2122,6 +2134,62 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         long s = totalSecs % 60;
         prayerCountdownView.setText(String.format(Locale.getDefault(),
                 "Next %s in %02d:%02d:%02d", name, h, m, s));
+    }
+
+    private void updateMemoryWidget() {
+        // ── Memory ────────────────────────────────────────────────────────
+        if (memoryText != null && memoryBar != null) {
+            ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            am.getMemoryInfo(mi);
+            long usedMb = (mi.totalMem - mi.availMem) / (1024 * 1024);
+            long totalMb = mi.totalMem / (1024 * 1024);
+            float memRatio = totalMb > 0 ? (float) usedMb / totalMb : 0f;
+            String used = usedMb >= 1000
+                    ? String.format(Locale.ROOT, "%.1fG", usedMb / 1024f)
+                    : usedMb + "M";
+            String total = totalMb >= 1000
+                    ? String.format(Locale.ROOT, "%.1fG", totalMb / 1024f)
+                    : totalMb + "M";
+            memoryText.setText(used + "/" + total);
+            memoryBar.setPivotX(0f);
+            memoryBar.setScaleX(Math.min(1f, Math.max(0f, memRatio)));
+            memoryBar.setBackgroundColor(statColor(memRatio));
+        }
+        // ── CPU ───────────────────────────────────────────────────────────
+        if (cpuText != null && cpuBar != null) {
+            float cpuRatio = readCpuRatio();
+            cpuText.setText(Math.round(cpuRatio * 100) + "%");
+            cpuBar.setPivotX(0f);
+            cpuBar.setScaleX(Math.min(1f, Math.max(0f, cpuRatio)));
+            cpuBar.setBackgroundColor(statColor(cpuRatio));
+        }
+    }
+
+    private float readCpuRatio() {
+        try {
+            java.io.RandomAccessFile f = new java.io.RandomAccessFile("/proc/stat", "r");
+            String line = f.readLine();
+            f.close();
+            String[] t = line.trim().split("\\s+");
+            long idle = Long.parseLong(t[4]);
+            long total = 0;
+            for (int i = 1; i < t.length; i++) total += Long.parseLong(t[i]);
+            long dIdle = idle - prevCpuIdle;
+            long dTotal = total - prevCpuTotal;
+            prevCpuIdle = idle;
+            prevCpuTotal = total;
+            if (dTotal <= 0) return 0f;
+            return Math.max(0f, Math.min(1f, 1f - (float) dIdle / dTotal));
+        } catch (Exception e) {
+            return 0f;
+        }
+    }
+
+    private static int statColor(float ratio) {
+        if (ratio < 0.6f) return 0xFF4ADE80;  // green
+        if (ratio < 0.8f) return 0xFFFACC15;  // yellow
+        return 0xFFF87171;                     // red
     }
 
     private void updateDateAndPeriod() {
