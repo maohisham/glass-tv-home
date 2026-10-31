@@ -110,6 +110,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static final float HERO_TITLE_MAX_SP = 40f;
     /** The breathing room between the shelf's last line and the top of the app container. */
     private static final float HERO_GAP_DP = 36f;
+    /** Extra upward offset for the wallpaper-info shelf only, keeping the Waktu Solat shelf in place. */
+    private static final float HERO_SHELF_EXTRA_DP = 28f;
     private static final float HERO_TITLE_MIN_SP = 26f;
     /** The shelf's width in pixels, worked out once from the screen. */
     private int heroMaxWidth, heroNameMaxWidth;
@@ -377,7 +379,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // bottom edge: every time it is measured, its top is worked out again. Positioning it by
         // the height it happened to have beforehand is what let a tall block run into the dock.
         heroShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
-            if (heroBottom > 0) v.setY(heroBottom - v.getHeight());
+            if (heroBottom > 0) v.setY(heroBottom - v.getHeight() - HERO_SHELF_EXTRA_DP * density);
         });
         ampmView = findViewById(R.id.ampm);
         dateView = findViewById(R.id.date);
@@ -1429,7 +1431,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final String where = usePlaceInfo ? placeCountry : "";
         int color = adapter.ambientColorAt(position);
         heroBottom = dockTopInRoot - HERO_GAP_DP * density;
-        float y = heroBottom - heroShelf.getHeight();
+        float y = heroBottom - heroShelf.getHeight() - HERO_SHELF_EXTRA_DP * density;
         boolean changed = !label.contentEquals(heroName.getText());
 
         if (reducedMotion) {
