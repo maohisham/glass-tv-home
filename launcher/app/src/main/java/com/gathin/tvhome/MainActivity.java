@@ -147,6 +147,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View memoryBar;
     private TextView cpuText;
     private View cpuBar;
+    private View cpuRow;
     private View memoryWidget;
     private View prayerPill;
     private View leftBlock;
@@ -423,6 +424,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             memoryBar = findViewById(R.id.memoryBar);
             cpuText = findViewById(R.id.cpuText);
             cpuBar = findViewById(R.id.cpuBar);
+            cpuRow = findViewById(R.id.cpuRow);
             prayerPill = findViewById(R.id.prayerPill);
 
             islamicShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
@@ -2167,44 +2169,94 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         refreshCpuAsync();
     }
 
-    // /proc/stat is blocked for untrusted apps on Android 10+; parse `top` instead.
+    // /proc/stat is blocked on Android 10+ (SELinux); try alternatives in order.
     private void refreshCpuAsync() {
         new Thread(() -> {
-            float ratio = -1f;
-            try {
-                Process p = Runtime.getRuntime().exec(new String[]{"top", "-b", "-n", "1"});
-                java.io.BufferedReader br = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(p.getInputStream()));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (line.contains("%cpu") && line.contains("%idle")) {
-                        int total = -1, idle = -1;
-                        for (String part : line.trim().split("\\s+")) {
-                            if (part.endsWith("%cpu")) {
-                                try { total = Integer.parseInt(part.replace("%cpu", "")); } catch (Exception ignored) {}
-                            } else if (part.endsWith("%idle")) {
-                                try { idle = Integer.parseInt(part.replace("%idle", "")); } catch (Exception ignored) {}
-                            }
-                        }
-                        if (total > 0 && idle >= 0)
-                            ratio = Math.min(1f, Math.max(0f, (float)(total - idle) / total));
-                        break;
-                    }
-                }
-                br.close();
-                p.destroy();
-            } catch (Exception ignored) {}
+            float ratio = readCpuFromLoadAvg();
+            if (ratio < 0) ratio = readCpuFromFreq();
+            if (ratio < 0) ratio = readCpuFromTop();
             final float result = ratio;
             handler.post(() -> applyCpuResult(result));
         }, "cpu-reader").start();
     }
 
+    // CPU frequency ratio — DVFS scaling reflects load; cpuinfo_max/min_freq are readable.
+    private float readCpuFromFreq() {
+        try {
+            int cpus = Math.max(1, Runtime.getRuntime().availableProcessors());
+            long cur = 0, max = 0, min = 0;
+            for (int i = 0; i < cpus; i++) {
+                String base = "/sys/devices/system/cpu/cpu" + i + "/cpufreq/";
+                cur += readFirstLong(base + "scaling_cur_freq");
+                max += readFirstLong(base + "cpuinfo_max_freq");
+                min += readFirstLong(base + "cpuinfo_min_freq");
+            }
+            long range = max - min;
+            if (range > 0) return Math.min(1f, Math.max(0f, (float)(cur - min) / range));
+        } catch (Exception ignored) {}
+        return -1f;
+    }
+
+    private long readFirstLong(String path) throws Exception {
+        java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(path));
+        long v = Long.parseLong(br.readLine().trim());
+        br.close();
+        return v;
+    }
+
+    private float readCpuFromLoadAvg() {
+        try {
+            java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.FileReader("/proc/loadavg"));
+            String line = br.readLine();
+            br.close();
+            if (line == null) return -1f;
+            float load1 = Float.parseFloat(line.trim().split("\\s+")[0]);
+            int cpus = Math.max(1, Runtime.getRuntime().availableProcessors());
+            return Math.min(1f, Math.max(0f, load1 / cpus));
+        } catch (Exception ignored) {
+            return -1f;
+        }
+    }
+
+    private float readCpuFromTop() {
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"top", "-b", "-n", "1"});
+            java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(p.getInputStream()));
+            String line;
+            float ratio = -1f;
+            while ((line = br.readLine()) != null) {
+                if (line.contains("%cpu") && line.contains("%idle")) {
+                    int total = -1, idle = -1;
+                    for (String part : line.trim().split("\\s+")) {
+                        if (part.endsWith("%cpu")) {
+                            try { total = Integer.parseInt(part.replace("%cpu", "")); } catch (Exception ignored) {}
+                        } else if (part.endsWith("%idle")) {
+                            try { idle = Integer.parseInt(part.replace("%idle", "")); } catch (Exception ignored) {}
+                        }
+                    }
+                    // idle == total means top couldn't read /proc/stat — treat as unavailable
+                    if (total > 0 && idle >= 0 && idle < total)
+                        ratio = Math.min(1f, Math.max(0f, (float)(total - idle) / total));
+                    break;
+                }
+            }
+            br.close();
+            p.destroy();
+            return ratio;
+        } catch (Exception ignored) {
+            return -1f;
+        }
+    }
+
     private void applyCpuResult(float ratio) {
         if (cpuText == null || cpuBar == null) return;
         if (ratio < 0) {
-            cpuText.setText("—");
-            cpuBar.setScaleX(0f);
+            // CPU data unavailable (SELinux blocks /proc/stat on Android 10+) — hide the row
+            if (cpuRow != null) cpuRow.setVisibility(View.GONE);
         } else {
+            if (cpuRow != null) cpuRow.setVisibility(View.VISIBLE);
             cpuText.setText(Math.round(ratio * 100) + "%");
             cpuBar.setPivotX(0f);
             cpuBar.setScaleX(ratio);
