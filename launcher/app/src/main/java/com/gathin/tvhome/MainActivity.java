@@ -386,6 +386,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateDateAndPeriod();
         weatherAirQualityView = findViewById(R.id.weatherAirQuality);
         if (weatherAirQualityView != null) {
+            if (cfg.aerialWallpaper) {
+                android.graphics.drawable.GradientDrawable weatherBg = new android.graphics.drawable.GradientDrawable();
+                weatherBg.setColor(0x33FFFFFF);
+                weatherBg.setCornerRadius(10f * density);
+                weatherAirQualityView.setBackground(weatherBg);
+            } else {
+                weatherAirQualityView.setBackground(new GlassDrawable(weatherAirQualityView, 10f * density, density, null, 1f, false, 0x60, false));
+                Backdrop.watch(weatherAirQualityView);
+            }
             weatherAirQualityView.setOnClickListener(v -> {
                 startActivity(new Intent(this, WeatherActivity.class));
             });
@@ -446,6 +455,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cpuBar = findViewById(R.id.cpuBar);
             cpuRow = findViewById(R.id.cpuRow);
             prayerPill = findViewById(R.id.prayerPill);
+            if (cfg.aerialWallpaper) {
+                android.graphics.drawable.GradientDrawable prayerBg = new android.graphics.drawable.GradientDrawable();
+                prayerBg.setColor(0x33FFFFFF);
+                prayerBg.setCornerRadius(12f * density);
+                prayerPill.setBackground(prayerBg);
+            } else {
+                prayerPill.setBackground(new GlassDrawable(prayerPill, 12f * density, density, null, 1f, false, 0x60, false));
+                Backdrop.watch(prayerPill);
+            }
 
             islamicShelf.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, orr, ob) -> {
                 if (heroBottom > 0) v.setY(heroBottom - v.getHeight());
@@ -679,6 +697,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         // Now Playing widget
         nowPlayingCard   = findViewById(R.id.nowPlayingCard);
+        if (cfg.aerialWallpaper) {
+            android.graphics.drawable.GradientDrawable npBg = new android.graphics.drawable.GradientDrawable();
+            npBg.setColor(0x33FFFFFF);
+            npBg.setCornerRadius(10f * density);
+            nowPlayingCard.setBackground(npBg);
+        } else {
+            nowPlayingCard.setBackground(new GlassDrawable(nowPlayingCard, 10f * density, density, null, 1f, false, 0x60, false));
+            Backdrop.watch(nowPlayingCard);
+        }
         nowPlayingArt    = (android.widget.ImageButton) findViewById(R.id.nowPlayingArt);
         nowPlayingArt.setOnClickListener(v -> {
             NowPlayingManager.NowPlayingInfo info = NowPlayingManager.getCurrent();

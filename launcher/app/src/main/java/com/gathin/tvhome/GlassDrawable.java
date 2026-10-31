@@ -22,10 +22,14 @@ final class GlassDrawable extends Drawable {
     private final float radius;
     private final Backdrop.Fill fill = new Backdrop.Fill();
     private final Paint veil = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint dark = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final GlassRim rim;
     private final Glider highlight;
     /** Paints the focus shape over the glass (a menu), rather than fading the glass for it (a pill). */
     private final boolean paintsShape;
+    /** Extra dark overlay alpha 0–255 painted after the blur, for panels that need a darker background. */
+    private final int darkAlpha;
+    private final boolean showRim;
     /** How far the glass is shown, 0 to 1, for a panel fading in or out. */
     private float fade = 1f;
     private final int[] at = new int[2], highlightAt = new int[2];
@@ -46,11 +50,24 @@ final class GlassDrawable extends Drawable {
      * never hides it.
      */
     GlassDrawable(View owner, float radius, float density, Glider highlight, float reach, boolean paintsShape) {
+        this(owner, radius, density, highlight, reach, paintsShape, 0);
+    }
+
+    /** {@code darkAlpha} 0–255 adds a black overlay on top of the blur for darker panels. */
+    GlassDrawable(View owner, float radius, float density, Glider highlight, float reach, boolean paintsShape, int darkAlpha) {
+        this(owner, radius, density, highlight, reach, paintsShape, darkAlpha, true);
+    }
+
+    /** {@code showRim} false suppresses the shining edge stroke. */
+    GlassDrawable(View owner, float radius, float density, Glider highlight, float reach, boolean paintsShape, int darkAlpha, boolean showRim) {
         this.paintsShape = paintsShape;
+        this.darkAlpha = darkAlpha;
+        this.showRim = showRim;
         this.owner = owner;
         this.highlight = highlight;
         this.radius = radius;
         veil.setColor(0xFFFFFF | VEIL_ALPHA << 24);
+        dark.setColor(0xFF000000);
         rim = new GlassRim(1.5f * density, 0xD9FFFFFF, 0x1AFFFFFF, reach);
     }
 
@@ -71,6 +88,10 @@ final class GlassDrawable extends Drawable {
             fill.draw(canvas, owner, rect, radius, glass);
             veil.setAlpha(Math.round(VEIL_ALPHA * glass));
             canvas.drawRoundRect(rect, radius, radius, veil);
+            if (darkAlpha > 0) {
+                dark.setAlpha(Math.round(darkAlpha * glass));
+                canvas.drawRoundRect(rect, radius, radius, dark);
+            }
             if (paintsShape && highlight != null && highlight.isShowing()) {
                 owner.getLocationInWindow(at);
                 highlight.getLocationInWindow(highlightAt);
@@ -79,11 +100,13 @@ final class GlassDrawable extends Drawable {
                 highlight.drawShape(canvas, highlightAt[0] - at[0], highlightAt[1] - at[1], owner);
                 canvas.restore();
             }
-            float half = rim.paint.getStrokeWidth() / 2f;
-            rect.inset(half, half);
-            rim.fit(rect);
-            rim.paint.setAlpha(Math.round(255 * glass));
-            canvas.drawRoundRect(rect, radius - half, radius - half, rim.paint);
+            if (showRim) {
+                float half = rim.paint.getStrokeWidth() / 2f;
+                rect.inset(half, half);
+                rim.fit(rect);
+                rim.paint.setAlpha(Math.round(255 * glass));
+                canvas.drawRoundRect(rect, radius - half, radius - half, rim.paint);
+            }
         }
         // The fill itself is the highlight view behind the pills, showing through as the glass clears;
         // painting it here as well would darken a focused pill twice over.
