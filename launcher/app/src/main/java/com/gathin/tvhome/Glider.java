@@ -80,6 +80,8 @@ final class Glider extends View {
     private float shadowMix;
     /** RGB colour for the shadow bloom; default white. */
     private int shadowColor = 0xFFFFFFFF;
+    /** True while a background thread is computing a new shadow bitmap. */
+    private boolean shadowPending = false;
     private ValueAnimator shadowFade;
     private final List<View> companions = new ArrayList<>();
     /** Per companion, the part of it the shape matters to (in its own coordinates), or null for all of it. */
@@ -314,23 +316,45 @@ final class Glider extends View {
         int w = Math.round(shape.width()), h = Math.round(shape.height());
         if (w <= 0 || h <= 0) return;
         int pad = (int) Math.ceil(shadowBlur * 2);
-        if (shadow != null && (w != shadowW || h != shadowH) && moving()) {
-            // Changing size mid-glide: stretch the glow it has rather than blur a new one every
-            // frame; the right one is made once the shape comes to rest.
+        boolean sizeChanged = shadow != null && (w != shadowW || h != shadowH);
+        if (sizeChanged && moving()) {
+            // Changing size mid-glide: stretch the existing shadow rather than compute a new one.
             shadowPaint.setColor(shadowColor);
             shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
             area.set(shape.left - pad, shape.top - pad + shadowDrop, shape.right + pad, shape.bottom + pad + shadowDrop);
             canvas.drawBitmap(shadow, null, area, shadowPaint);
             return;
         }
-        if (shadow == null || w != shadowW || h != shadowH) {
-            shadow = Bitmap.createBitmap(w + 2 * pad, h + 2 * pad, Bitmap.Config.ALPHA_8);
-            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-            p.setColor(0xFF000000);
-            p.setMaskFilter(new android.graphics.BlurMaskFilter(shadowBlur, android.graphics.BlurMaskFilter.Blur.NORMAL));
-            new Canvas(shadow).drawRoundRect(pad, pad, pad + w, pad + h, radius, radius, p);
-            shadowW = w;
-            shadowH = h;
+        if (shadow == null || sizeChanged) {
+            // Kick off a background thread to build the blurred shadow bitmap; show the old one
+            // (stretched) or nothing until it is ready — BlurMaskFilter on the main thread stalls
+            // the render thread on weak GPUs.
+            if (!shadowPending) {
+                shadowPending = true;
+                final int fw = w, fh = h, fpad = pad;
+                final float fr = radius, fblur = shadowBlur;
+                new Thread(() -> {
+                    Bitmap b = Bitmap.createBitmap(fw + 2 * fpad, fh + 2 * fpad, Bitmap.Config.ALPHA_8);
+                    Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    p.setColor(0xFF000000);
+                    p.setMaskFilter(new android.graphics.BlurMaskFilter(fblur, android.graphics.BlurMaskFilter.Blur.NORMAL));
+                    new Canvas(b).drawRoundRect(fpad, fpad, fpad + fw, fpad + fh, fr, fr, p);
+                    post(() -> {
+                        shadow = b;
+                        shadowW = fw;
+                        shadowH = fh;
+                        shadowPending = false;
+                        changed();
+                    });
+                }, "glider-shadow").start();
+            }
+            if (shadow == null) return; // nothing to show yet
+            // Stretch old shadow as placeholder while the new one is being made.
+            shadowPaint.setColor(shadowColor);
+            shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));
+            area.set(shape.left - pad, shape.top - pad + shadowDrop, shape.right + pad, shape.bottom + pad + shadowDrop);
+            canvas.drawBitmap(shadow, null, area, shadowPaint);
+            return;
         }
         shadowPaint.setColor(shadowColor);
         shadowPaint.setAlpha(Math.round(0x99 * opacity * shadowMix));

@@ -176,6 +176,9 @@ final class Backdrop {
     /** Memory is short: let go of what can be remade. The copy on the glass stays. */
     static void trim() {
         tinted.clear();
+        if (blurFade != null) { blurFade.cancel(); blurFade = null; }
+        if (previous != null) { keepSpare(previous); previous = null; }
+        blurMix = 1f;
         synchronized (SPARE_LOCK) {
             spare = null;
             pixels = null;

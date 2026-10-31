@@ -240,7 +240,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 android.graphics.Bitmap frame = aerialPlayer.getBitmap();
                 if (frame != null) blurBackdrop(frame);
             }
-            if (aerialActive) handler.postDelayed(this, AERIAL_BACKDROP_INTERVAL_MS);
+            if (aerialActive) {
+                long interval = reducedMotion ? AERIAL_BACKDROP_INTERVAL_MS * 2 : AERIAL_BACKDROP_INTERVAL_MS;
+                handler.postDelayed(this, interval);
+            }
         }
     };
     private View mainContent;
@@ -363,6 +366,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         mainContent = findViewById(R.id.mainContent);
         glass = findViewById(R.id.glass);
+        if (glass != null) glass.setReducedMotion(reducedMotion);
         ambient = findViewById(R.id.ambient);
         Backdrop.setWorker(wallDecoder, handler);
         heroShelf = findViewById(R.id.heroShelf);
@@ -838,8 +842,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
             opts.inJustDecodeBounds = true;
             android.graphics.BitmapFactory.decodeFile(file.getPath(), opts);
-            int targetW = Math.max(dm.widthPixels, 3840);
-            int targetH = Math.max(dm.heightPixels, 2160);
+            int targetW = dm.widthPixels;
+            int targetH = dm.heightPixels;
             int sample = 1;
             while (opts.outWidth / (sample * 2) >= targetW && opts.outHeight / (sample * 2) >= targetH) sample *= 2;
             opts.inJustDecodeBounds = false;
@@ -889,9 +893,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // The glass fades to the new picture over the same 800 ms as the wallpaper itself.
             if (blur != null) Backdrop.present(blur, 800);
             else blurBackdrop(bmp);
-            // Drop the old picture once the fade is done, so only one 1080p bitmap stays in memory.
+            // Drop the old picture once the fade is done; recycle it so GC pressure stays low.
+            final android.graphics.Bitmap discarded = old;
             handler.postDelayed(() -> {
                 if (wallBitmap == bmp) wallView.setImageBitmap(bmp);
+                if (discarded != bmp && !discarded.isRecycled()) discarded.recycle();
             }, 900);
         } else {
             wallView.setImageBitmap(bmp);
@@ -1295,6 +1301,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        SleepTimer.get().setListener(null);
         handler.removeCallbacks(aerialBackdropTick);
         if (aerialPlayer != null) { aerialPlayer.stop(); aerialPlayer = null; }
         SoundEffects.release();
@@ -2384,13 +2391,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // /proc/stat is blocked on Android 10+ (SELinux); try alternatives in order.
     private void refreshCpuAsync() {
-        new Thread(() -> {
+        wallDecoder.execute(() -> {
             float ratio = readCpuFromLoadAvg();
             if (ratio < 0) ratio = readCpuFromFreq();
             if (ratio < 0) ratio = readCpuFromTop();
             final float result = ratio;
             handler.post(() -> applyCpuResult(result));
-        }, "cpu-reader").start();
+        });
     }
 
     // CPU frequency ratio — DVFS scaling reflects load; cpuinfo_max/min_freq are readable.

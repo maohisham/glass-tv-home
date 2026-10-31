@@ -25,6 +25,10 @@ public class GlassView extends View {
     private static final int[][] GLOW_LAYERS = {
             {10, 0x55}, {7, 0x77}, {4, 0x99}, {2, 0xBB}
     };
+    private static final int[][] GLOW_LAYERS_REDUCED = {
+            {4, 0x99}, {2, 0xBB}
+    };
+    private boolean reducedMotion;
 
     public GlassView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -48,6 +52,10 @@ public class GlassView extends View {
         invalidate();
     }
 
+    void setReducedMotion(boolean reduced) {
+        reducedMotion = reduced;
+    }
+
     void setGlowColor(int color) {
         glowPaint.setColor(color);
         invalidate();
@@ -59,7 +67,7 @@ public class GlassView extends View {
         rect.set(inset, inset, getWidth() - inset, getHeight() - inset);
 
         // Layered outer glow: concentric strokes from large+faint to small+bright.
-        for (int[] layer : GLOW_LAYERS) {
+        for (int[] layer : reducedMotion ? GLOW_LAYERS_REDUCED : GLOW_LAYERS) {
             float expand = layer[0] * density;
             int alpha = layer[1];
             glowRect.set(rect.left - expand, rect.top - expand,
