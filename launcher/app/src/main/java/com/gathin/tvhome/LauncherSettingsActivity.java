@@ -105,6 +105,10 @@ public class LauncherSettingsActivity extends Activity {
                 "Show daily Quran verse",
                 cfg.widgetQuran,
                 v -> Config.save(cfgDir, "widget_quran", v));
+        addToggle(content, "Now Playing",
+                "Show media controls when music or video is playing in the background",
+                cfg.widgetNowPlaying,
+                v -> Config.save(cfgDir, "widget_now_playing", v));
 
         // ── Sound ──────────────────────────────────────────────────────────
         addSection(content, "Sound");

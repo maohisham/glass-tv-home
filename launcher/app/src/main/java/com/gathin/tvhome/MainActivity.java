@@ -2380,6 +2380,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (ayatRef != null) ayatRef.setVisibility(quranVis);
         if (ayatArabic != null) ayatArabic.setVisibility(quranVis);
         if (ayatTranslation != null) ayatTranslation.setVisibility(quranVis);
+        // Now Playing: disabled by toggle hides the card entirely regardless of media state
+        if (!c.widgetNowPlaying && nowPlayingCard != null) {
+            nowPlayingCard.setVisibility(View.GONE);
+            handler.removeCallbacks(nowPlayingPoll);
+        } else if (c.widgetNowPlaying) {
+            handler.removeCallbacks(nowPlayingPoll);
+            handler.postDelayed(nowPlayingPoll, 500L);
+        }
     }
 
     private static void setWidget(View v, boolean show) {

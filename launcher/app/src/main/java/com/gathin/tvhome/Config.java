@@ -90,6 +90,7 @@ final class Config {
     final boolean widgetStats;
     final boolean widgetSolat;
     final boolean widgetQuran;
+    final boolean widgetNowPlaying;
     /** Whether the overlay file was present and parsed. */
     final boolean overlayApplied;
 
@@ -107,7 +108,7 @@ final class Config {
                    int sleepTimerMinutes, boolean showWallpaperInfo,
                    boolean widgetClock, boolean widgetWeather, boolean widgetInternet,
                    boolean widgetStats, boolean widgetSolat, boolean widgetQuran,
-                   boolean overlayApplied) {
+                   boolean widgetNowPlaying, boolean overlayApplied) {
         this.dockApps = Collections.unmodifiableList(dockApps);
         this.hiddenApps = Collections.unmodifiableList(hiddenApps);
         this.liveTvPackage = liveTvPackage;
@@ -146,6 +147,7 @@ final class Config {
         this.widgetStats = widgetStats;
         this.widgetSolat = widgetSolat;
         this.widgetQuran = widgetQuran;
+        this.widgetNowPlaying = widgetNowPlaying;
         this.overlayApplied = overlayApplied;
     }
 
@@ -250,8 +252,9 @@ final class Config {
         boolean widgetWeather  = json == null || bool(json, "widget_weather",  true);
         boolean widgetInternet = json == null || bool(json, "widget_internet", true);
         boolean widgetStats    = json == null || bool(json, "widget_stats",    true);
-        boolean widgetSolat    = json == null || bool(json, "widget_solat",    true);
-        boolean widgetQuran    = json == null || bool(json, "widget_quran",    true);
+        boolean widgetSolat      = json == null || bool(json, "widget_solat",       true);
+        boolean widgetQuran      = json == null || bool(json, "widget_quran",       true);
+        boolean widgetNowPlaying = json == null || bool(json, "widget_now_playing", true);
 
         return new Config(dock, hidden, liveTv, liveTvAction, panelService, panelAction, inputAction,
                 Math.max(1, columns), Math.max(0, rowsBelow), shamsi, moduleCards, reducedMotion,
@@ -260,7 +263,7 @@ final class Config {
                 iconPack, aerialWallpaper, aerialScenes, soundNavEnabled, soundSelectEnabled, soundVolume,
                 sleepTimerMinutes, showWallpaperInfo,
                 widgetClock, widgetWeather, widgetInternet, widgetStats, widgetSolat, widgetQuran,
-                applied);
+                widgetNowPlaying, applied);
     }
 
     /** Reads and parses the overlay; any problem means "no overlay", never a crash on the home screen. */
