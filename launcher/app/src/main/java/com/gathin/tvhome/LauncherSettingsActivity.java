@@ -10,6 +10,7 @@ import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -17,6 +18,7 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -95,6 +97,9 @@ public class LauncherSettingsActivity extends Activity {
                 cfg.sleepTimerMinutes,
                 v -> Config.save(cfgDir, "sleep_timer_minutes", v));
 
+        // ── Home Assistant ─────────────────────────────────────────────────
+        addHaSection(content);
+
         // ── Widgets ────────────────────────────────────────────────────────
         addSection(content, "Widgets");
         addToggle(content, "Clock",
@@ -148,6 +153,108 @@ public class LauncherSettingsActivity extends Activity {
         addSection(content, "Hidden Apps");
         addHiddenAppsManager(content, new ArrayList<>(cfg.hiddenApps));
 
+    }
+
+    // ── Home Assistant ─────────────────────────────────────────────────────
+
+    private LinearLayout haStatusRow;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshHaStatus();
+    }
+
+    private void addHaSection(LinearLayout parent) {
+        addSection(parent, "Home Assistant");
+        addToggle(parent, "Link to Home Assistant",
+                "Lets Home Assistant start, change and cancel the sleep timer and see its state",
+                HaSettings.enabled(this),
+                v -> { Config.save(cfgDir, "ha_enabled", v); haChanged(); });
+        addTextSetting(parent, "Address", "For example http://homeassistant.local:8123",
+                HaSettings.url(this), false,
+                v -> { Config.save(cfgDir, "ha_url", v); haChanged(); return true; });
+        addTextSetting(parent, "Device name", "Used when Home Assistant addresses one TV",
+                HaSettings.device(this), false,
+                v -> { Config.save(cfgDir, "ha_device", v); haChanged(); return true; });
+        addTextSetting(parent, "Access token", "Long-lived access token from your Home Assistant profile",
+                HaSettings.token(this), true,
+                v -> {
+                    if (HaSettings.parseTokenFile(v) == null) {
+                        Toast.makeText(this, "That does not look like an access token", Toast.LENGTH_LONG).show();
+                        return false;
+                    }
+                    HaSettings.setToken(this, v);
+                    haChanged();
+                    return true;
+                });
+        haStatusRow = makeRow(parent, "Status", haStatusText());
+        haStatusRow.setFocusable(false);
+        haStatusRow.setClickable(false);
+    }
+
+    private void haChanged() {
+        HaLink.get().onSettingsChanged();
+        if (haStatusRow != null) haStatusRow.postDelayed(this::refreshHaStatus, 1500);
+    }
+
+    private void refreshHaStatus() {
+        if (haStatusRow != null) updateSubtitle(haStatusRow, haStatusText());
+    }
+
+    private String haStatusText() {
+        if (HomeKeyService.getInstance() == null) {
+            return "Needs the Home key service (turn it on in Accessibility settings)";
+        }
+        switch (HaLink.getStatus()) {
+            case CONNECTING: return "Connecting…";
+            case CONNECTED: return "Connected";
+            case AUTH_FAILED: return "Home Assistant rejected the access token";
+            case NETWORK_UNREACHABLE: return "No network";
+            default: return "Off, or address and token not set";
+        }
+    }
+
+    /**
+     * A row that opens a text-entry dialog. The subtitle shows the value, or the hint when empty; a masked
+     * row (a secret) is never prefilled and shows only "Set". {@code onSave} returns false to refuse the value.
+     */
+    private LinearLayout addTextSetting(LinearLayout parent, String title, String hint, String current,
+                                        boolean masked, java.util.function.Predicate<String> onSave) {
+        LinearLayout row = makeRow(parent, title, textSubtitle(hint, current, masked));
+        row.setFocusable(true);
+        row.setOnClickListener(v -> {
+            EditText et = new EditText(this);
+            et.setHint(hint);
+            et.setTextColor(0xFFEEEEF5);
+            et.setHintTextColor(0xFF808090);
+            et.setSingleLine(true);
+            et.setPadding(48, 24, 48, 24);
+            if (masked) {
+                et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            } else {
+                et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+                et.setText(row.getTag() instanceof String ? (String) row.getTag() : current);
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle(title)
+                    .setView(et)
+                    .setPositiveButton("Save", (d, w) -> {
+                        String value = et.getText().toString().trim();
+                        if (masked && value.isEmpty()) return;   // blank keeps the saved secret
+                        if (!onSave.test(value)) return;
+                        row.setTag(value);
+                        updateSubtitle(row, textSubtitle(hint, value, masked));
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+        return row;
+    }
+
+    private static String textSubtitle(String hint, String value, boolean masked) {
+        if (value == null || value.isEmpty()) return hint;
+        return masked ? "Set" : value;
     }
 
     // ── Location setting ───────────────────────────────────────────────────
