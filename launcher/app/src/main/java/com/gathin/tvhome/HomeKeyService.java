@@ -82,6 +82,10 @@ public class HomeKeyService extends AccessibilityService {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         settingsScancodes = getResources().getIntArray(R.array.settings_key_scancodes);
         Log.i(TAG, "HomeKeyService connected");
+        // This service is always running, so it owns what must outlive the launcher activity: putting the TV
+        // to sleep when a timer ends, and the optional link to Home Assistant (does nothing until set up).
+        SleepTimer.get().setExpiryHandler(HomeKeyService::triggerSleep);
+        HaLink.get().start(this);
         // If the launcher already started a timer before the service connected (e.g. after reboot),
         // pick it up now so the overlay appears without needing the user to cycle the timer.
         if (SleepTimer.get().isActive()) {
@@ -91,6 +95,8 @@ public class HomeKeyService extends AccessibilityService {
 
     @Override
     public void onDestroy() {
+        HaLink.get().stop();
+        SleepTimer.get().setExpiryHandler(null);
         hideTimerOverlay();
         if (instance == this) instance = null;
         super.onDestroy();

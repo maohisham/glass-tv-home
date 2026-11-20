@@ -692,8 +692,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (svc != null) svc.updateTimerOverlay(ms);
             }
             @Override public void onExpired() {
+                // Sleeping the TV is done by SleepTimer's expiry handler, set by HomeKeyService, so it
+                // happens even when this activity is gone.
                 updateTimerDisplay();
-                HomeKeyService.triggerSleep();
             }
         });
         if (cfg.sleepTimerMinutes > 0) {
