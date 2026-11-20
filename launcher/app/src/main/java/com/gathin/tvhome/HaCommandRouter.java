@@ -19,17 +19,16 @@ final class HaCommandRouter {
         handlers.put(prefix, handler);
     }
 
-    /**
-     * Returns whether a handler took the command. A command addressed to another device name (compared
-     * ignoring case) is ignored; an empty device means every TV.
-     */
-    boolean dispatch(HaMessages.Command command, String ownDevice) {
-        if (command == null) return false;
+    /** True when the command is for every TV (no device) or for this one; names compare ignoring case. */
+    static boolean addressedTo(HaMessages.Command command, String ownDevice) {
         String device = command.device == null ? "" : command.device;
-        if (!device.isEmpty() && !device.toLowerCase(Locale.ROOT).equals(
-                ownDevice == null ? "" : ownDevice.toLowerCase(Locale.ROOT))) {
-            return false;
-        }
+        return device.isEmpty() || device.toLowerCase(Locale.ROOT).equals(
+                ownDevice == null ? "" : ownDevice.toLowerCase(Locale.ROOT));
+    }
+
+    /** Returns whether a handler took the command; one addressed to another device is ignored. */
+    boolean dispatch(HaMessages.Command command, String ownDevice) {
+        if (command == null || !addressedTo(command, ownDevice)) return false;
         int dot = command.name.indexOf('.');
         if (dot <= 0) return false;
         Handler h = handlers.get(command.name.substring(0, dot));

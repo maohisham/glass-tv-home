@@ -160,7 +160,14 @@ final class HaLink {
                 if (c != null) c.close();
                 break;
             case COMMAND:
-                router.dispatch(in.command, device);
+                if (!router.dispatch(in.command, device)) {
+                    if (!HaCommandRouter.addressedTo(in.command, device)) {
+                        Log.w(TAG, "ignored " + in.command.name + ": it is for device \"" + in.command.device
+                                + "\" and this TV is \"" + device + "\"");
+                    } else {
+                        Log.w(TAG, "ignored " + in.command.name + ": no handler for it");
+                    }
+                }
                 break;
             case RESULT:
                 if (!in.success && !warnedRefused) {

@@ -62,4 +62,11 @@ public class HaCommandRouterTest {
         assertTrue(r.dispatch(cmd("timer.cancel", ""), "bedroom"));
         assertEquals(1, got.size());
     }
+
+    @Test
+    public void addressedToComparesTheDeviceIgnoringCase() {
+        assertTrue(HaCommandRouter.addressedTo(cmd("timer.start", "GlassTV"), "glasstv"));
+        assertTrue(HaCommandRouter.addressedTo(cmd("timer.start", ""), "glasstv"));
+        assertFalse(HaCommandRouter.addressedTo(cmd("timer.start", "nvidia_shield_tv"), "glasstv"));
+    }
 }
