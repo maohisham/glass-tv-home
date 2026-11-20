@@ -51,7 +51,55 @@ public class SleepTimerTest {
     }
 
     @Test
-    public void nextPresetUnknownValueWrapsToFirst() {
-        assertEquals(15, SleepTimer.nextPresetMinutes(99));
+    public void nextPresetUnknownValueGoesToNextPresetAbove() {
+        assertEquals(120, SleepTimer.nextPresetMinutes(99));
+        assertEquals(60, SleepTimer.nextPresetMinutes(45));
+        assertEquals(15, SleepTimer.nextPresetMinutes(7));
+        assertEquals(15, SleepTimer.nextPresetMinutes(-4));
+    }
+
+    @Test
+    public void nextPresetAboveLastPresetIsOff() {
+        assertEquals(0, SleepTimer.nextPresetMinutes(130));
+        assertEquals(0, SleepTimer.nextPresetMinutes(720));
+    }
+
+    @Test
+    public void validMinutesIsOneTo720() {
+        assertFalse(SleepTimer.validMinutes(0));
+        assertFalse(SleepTimer.validMinutes(-1));
+        assertFalse(SleepTimer.validMinutes(721));
+        assertTrue(SleepTimer.validMinutes(1));
+        assertTrue(SleepTimer.validMinutes(720));
+    }
+
+    @Test
+    public void addToIdleTimerStartsOne() {
+        assertEquals(900_000L, SleepTimer.addedRemainingMs(false, 0, 15));
+    }
+
+    @Test
+    public void addToRunningTimerExtendsIt() {
+        assertEquals(1_500_000L, SleepTimer.addedRemainingMs(true, 600_000L, 15));
+    }
+
+    @Test
+    public void addNeverGoesAbove720Minutes() {
+        assertEquals(720 * 60_000L, SleepTimer.addedRemainingMs(true, 719 * 60_000L, 30));
+    }
+
+    @Test
+    public void subtractRemovesTime() {
+        assertEquals(300_000L, SleepTimer.subtractedRemainingMs(600_000L, 5));
+    }
+
+    @Test
+    public void subtractLeavesOneMinute() {
+        assertEquals(60_000L, SleepTimer.subtractedRemainingMs(120_000L, 60));
+    }
+
+    @Test
+    public void subtractNeverExtendsATimerUnderOneMinute() {
+        assertEquals(30_000L, SleepTimer.subtractedRemainingMs(30_000L, 5));
     }
 }
