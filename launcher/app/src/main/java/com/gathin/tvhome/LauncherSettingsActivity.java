@@ -173,7 +173,16 @@ public class LauncherSettingsActivity extends Activity {
                 v -> { Config.save(cfgDir, "ha_enabled", v); haChanged(); });
         addTextSetting(parent, "Address", "For example http://homeassistant.local:8123",
                 HaSettings.url(this), false,
-                v -> { Config.save(cfgDir, "ha_url", v); haChanged(); return true; });
+                v -> {
+                    if (!v.isEmpty() && HaAddress.toWebSocketUrl(v) == null) {
+                        Toast.makeText(this, "That address is not accepted. Plain http only works for addresses on "
+                                + "your home network; anything else needs https://", Toast.LENGTH_LONG).show();
+                        return false;
+                    }
+                    Config.save(cfgDir, "ha_url", v);
+                    haChanged();
+                    return true;
+                });
         addTextSetting(parent, "Device name", "Used when Home Assistant addresses one TV",
                 HaSettings.device(this), false,
                 v -> { Config.save(cfgDir, "ha_device", v); haChanged(); return true; });

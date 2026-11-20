@@ -74,6 +74,9 @@ import java.util.Set;
  * tvOS style home: black, a pinned dock row, an app grid, and one glass highlight that springs between tiles.
  */
 public class MainActivity extends Activity implements AppAdapter.TileListener {
+    /** Set once the start-up default sleep timer has been considered in this process. */
+    private static boolean sleepDefaultChecked;
+
 
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
     static int COLUMNS = 4;
@@ -697,7 +700,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 updateTimerDisplay();
             }
         });
-        if (cfg.sleepTimerMinutes > 0) {
+        // The default timer is a start-up setting: apply it once per process, and never over a timer that is
+        // running or that Home Assistant has changed or cancelled since (this runs on every re-creation).
+        boolean applyDefaultTimer = SleepTimer.shouldApplyDefault(
+                sleepDefaultChecked, SleepTimer.get().isActive(), cfg.sleepTimerMinutes);
+        sleepDefaultChecked = true;
+        if (applyDefaultTimer) {
             SleepTimer.get().start(cfg.sleepTimerMinutes);
             updateTimerDisplay();
             HomeKeyService svc = HomeKeyService.getInstance();

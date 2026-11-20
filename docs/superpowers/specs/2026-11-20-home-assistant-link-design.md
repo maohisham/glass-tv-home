@@ -170,9 +170,11 @@ the file. The token is never logged and never shown in full on screen.
 
 ### 6. Network config
 
-Add a cleartext allowance so `http://` / `ws://` to a LAN HA works (`usesCleartextTraffic` or a network
-security config). Because Android cannot limit cleartext to a private IP range, the "private hosts only for
-`ws://`" rule in section 2 is enforced in code. Existing traffic (wallpapers over `https`) is unaffected.
+No manifest change is needed: Android's cleartext rule covers HTTP stacks (`HttpURLConnection`, WebView), not a
+raw `Socket`, so `ws://` to a LAN Home Assistant already works. The "private hosts only for `ws://`" rule in
+section 2 is enforced in code. (Revised after review: the first draft added `usesCleartextTraffic`, which did
+nothing for the socket and only widened cleartext for the rest of the app. The camera follow-up adds it, or a
+network security config, if it fetches over plain `http://` with `HttpURLConnection`.)
 
 ### 7. Leaving room for the camera
 

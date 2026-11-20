@@ -108,4 +108,10 @@ public class HaMessagesTest {
         assertFalse(in.success);
         assertTrue(HaMessages.parse("{\"id\":8,\"type\":\"result\",\"success\":true}").success);
     }
+
+    @Test
+    public void wholeNumberSentAsDecimalIsAccepted() {
+        HaMessages.Incoming in = HaMessages.parse(commandEvent("{\"command\":\"timer.start\",\"minutes\":30.0}"));
+        assertEquals(30, in.command.minutes);
+    }
 }

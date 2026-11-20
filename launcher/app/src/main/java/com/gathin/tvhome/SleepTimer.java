@@ -115,6 +115,14 @@ final class SleepTimer {
 
     static boolean validMinutes(int m) { return m >= 1 && m <= MAX_MINUTES; }
 
+    /**
+     * Whether the launcher should start its configured default timer now: once per process, never over a
+     * timer that is already running (for example one Home Assistant started), and only when a default is set.
+     */
+    static boolean shouldApplyDefault(boolean alreadyApplied, boolean timerActive, int defaultMinutes) {
+        return !alreadyApplied && !timerActive && defaultMinutes > 0;
+    }
+
     /** Remaining time after adding {@code minutes}: an idle timer starts from zero; never above 720 minutes. */
     static long addedRemainingMs(boolean active, long remainingMs, int minutes) {
         long base = active ? remainingMs : 0L;

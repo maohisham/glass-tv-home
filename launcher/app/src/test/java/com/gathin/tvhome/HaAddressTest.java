@@ -62,4 +62,32 @@ public class HaAddressTest {
         assertEquals("https://ha.example.com", HaAddress.toHttpBase("https://ha.example.com/"));
         assertEquals("http://192.168.0.10:8123", HaAddress.toHttpBase("192.168.0.10:8123"));
     }
+    @Test
+    public void bareHostGetsHomeAssistantsDefaultPort() {
+        assertEquals("ws://192.168.1.20:8123/api/websocket", HaAddress.toWebSocketUrl("192.168.1.20"));
+        assertEquals("ws://homeassistant.local:8123/api/websocket", HaAddress.toWebSocketUrl("homeassistant.local"));
+        assertEquals("ws://ha.local:8123/api/websocket", HaAddress.toWebSocketUrl("http://ha.local"));
+        assertEquals("http://192.168.1.20:8123", HaAddress.toHttpBase("192.168.1.20"));
+    }
+
+    @Test
+    public void secureAddressWithoutPortKeepsTheStandardPort() {
+        assertEquals("wss://ha.example.com/api/websocket", HaAddress.toWebSocketUrl("https://ha.example.com"));
+    }
+
+    @Test
+    public void pastedBrowserAddressLosesPathQueryAndFragment() {
+        assertEquals("ws://ha.local:8123/api/websocket",
+                HaAddress.toWebSocketUrl("http://ha.local:8123/lovelace/0?x=1#y"));
+        assertEquals("ws://ha.local:8123/api/websocket", HaAddress.toWebSocketUrl("http://ha.local:8123?x=1"));
+        assertEquals("wss://ha.example.com/api/websocket", HaAddress.toWebSocketUrl("https://ha.example.com/lovelace"));
+        assertEquals("http://ha.local:8123", HaAddress.toHttpBase("http://ha.local:8123/lovelace/0?x=1"));
+    }
+
+    @Test
+    public void hostWithUnderscoreOrBadOctetIsRefused() {
+        assertNull(HaAddress.toWebSocketUrl("http://my_ha.local:8123"));
+        assertNull(HaAddress.toWebSocketUrl("http://192.168.1.999:8123"));
+        assertFalse(HaAddress.isPrivateHost("192.168.1.999"));
+    }
 }

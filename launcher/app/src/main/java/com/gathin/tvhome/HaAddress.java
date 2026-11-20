@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
  */
 final class HaAddress {
     private static final String WS_PATH = "/api/websocket";
+    private static final int DEFAULT_PORT = 8123;
     private static final Pattern SCHEME = Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*)://(.*)$");
     private static final Pattern IPV4 = Pattern.compile("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$");
 
@@ -45,6 +46,9 @@ final class HaAddress {
         if (h.isEmpty()) return false;
         Matcher m = IPV4.matcher(h);
         if (m.matches()) {
+            for (int i = 1; i <= 4; i++) {
+                if (Integer.parseInt(m.group(i)) > 255) return false;
+            }
             int a = Integer.parseInt(m.group(1)), b = Integer.parseInt(m.group(2));
             return a == 10 || a == 127 || (a == 169 && b == 254)
                     || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168);
@@ -72,11 +76,25 @@ final class HaAddress {
             case "https": case "wss": secure = true; break;
             default: return null;
         }
-        int slash = s.indexOf('/');
-        String hostPort = slash >= 0 ? s.substring(0, slash) : s;
-        String path = slash >= 0 ? s.substring(slash) : "";
-        while (path.endsWith("/")) path = path.substring(0, path.length() - 1);
-        if (hostPort.isEmpty() || hostPort.matches(".*\\s.*")) return null;
+        // The host part ends at the first / ? or #; a pasted browser address loses its page, query and fragment.
+        int end = s.length();
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch == '/' || ch == '?' || ch == '#') { end = i; break; }
+        }
+        String hostPort = s.substring(0, end);
+        String path = "";
+        if (end < s.length() && s.charAt(end) == '/') {
+            int stop = s.length();
+            for (int i = end; i < s.length(); i++) {
+                char ch = s.charAt(i);
+                if (ch == '?' || ch == '#') { stop = i; break; }
+            }
+            path = s.substring(end, stop);
+            while (path.endsWith("/")) path = path.substring(0, path.length() - 1);
+            if (!path.endsWith(WS_PATH)) path = "";
+        }
+        if (hostPort.isEmpty()) return null;
 
         String host = hostPort, port = null;
         if (hostPort.startsWith("[")) {
@@ -94,6 +112,7 @@ final class HaAddress {
                 host = hostPort.substring(0, colon);
                 port = hostPort.substring(colon + 1);
             }
+            if (!host.matches("[A-Za-z0-9.-]+")) return null;
         }
         if (host.isEmpty()) return null;
         if (port != null) {
@@ -102,6 +121,8 @@ final class HaAddress {
             if (n < 1 || n > 65535) return null;
         }
         if (!secure && !isPrivateHost(host)) return null;
+        // Home Assistant listens on 8123; a plain address typed without a port means that.
+        if (port == null && !secure) hostPort = hostPort + ":" + DEFAULT_PORT;
 
         Parsed p = new Parsed();
         p.secure = secure;

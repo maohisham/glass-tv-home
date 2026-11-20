@@ -14,6 +14,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
@@ -21,15 +25,19 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 /**
- * A minimal WebSocket client (RFC 6455, text messages only) on one background thread. Callbacks arrive on
- * that thread: the owner posts them to the main thread. Created per connection attempt; once it has
- * reported {@link Listener#onClosed} it is finished and a new instance makes the next attempt.
+ * A minimal WebSocket client (RFC 6455, text messages only). One thread reads; a second single thread
+ * writes, so {@link #send} and {@link #close} are safe to call from the main thread (Android forbids
+ * network writes there). Callbacks arrive on the reading thread: the owner posts them to the main thread.
+ * Created per connection attempt; once it has reported {@link Listener#onClosed} it is finished and a new
+ * instance makes the next attempt.
  */
 final class WebSocketClient {
     private static final String TAG = "TvHome.WebSocket";
     private static final int CONNECT_TIMEOUT_MS = 10_000;
     /** No frame at all for this long (Home Assistant answers our 30 s pings) means the link is dead. */
     private static final int READ_TIMEOUT_MS = 75_000;
+    /** Messages waiting to be written; past this a stalled peer makes {@link #send} refuse, not grow memory. */
+    private static final int MAX_PENDING_BYTES = 4 * 1024 * 1024;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     interface Listener {
@@ -41,9 +49,10 @@ final class WebSocketClient {
 
     private final String wsUrl;
     private final Listener listener;
-    private final Object writeLock = new Object();
+    private final AtomicInteger pendingBytes = new AtomicInteger();
     private volatile Socket socket;
     private volatile OutputStream out;
+    private volatile ExecutorService writer;
     private volatile boolean closedByUs;
 
     WebSocketClient(String wsUrl, Listener listener) {
@@ -57,33 +66,61 @@ final class WebSocketClient {
         t.start();
     }
 
-    /** Thread-safe; false when not connected or the write failed. */
+    /**
+     * Queues a text message and returns at once; the write happens on the writer thread. False when not
+     * connected, already closed, or too much is still waiting to be written.
+     */
     boolean send(String text) {
         return write(WsFrames.OP_TEXT, text.getBytes(StandardCharsets.UTF_8));
     }
 
+    /** Safe from any thread, including the main thread: the socket is closed on a thread of its own. */
     void close() {
         closedByUs = true;
+        ExecutorService w = writer;
+        if (w != null) w.shutdownNow();
         Socket s = socket;
-        if (s != null) {
+        if (s != null) closeInBackground(s);
+    }
+
+    private static void closeInBackground(Socket s) {
+        Thread t = new Thread(() -> {
             try { s.close(); } catch (IOException ignored) { }
-        }
+        }, "HaWebSocketClose");
+        t.setDaemon(true);
+        t.start();
     }
 
     private boolean write(int opcode, byte[] payload) {
+        ExecutorService w = writer;
         OutputStream o = out;
-        if (o == null) return false;
+        if (w == null || o == null || closedByUs) return false;
         byte[] mask = new byte[4];
         RANDOM.nextBytes(mask);
         byte[] frame = WsFrames.encode(opcode, payload, mask);
-        synchronized (writeLock) {
-            try {
-                o.write(frame);
-                o.flush();
-                return true;
-            } catch (IOException e) {
-                return false;
-            }
+        if (pendingBytes.addAndGet(frame.length) > MAX_PENDING_BYTES) {
+            pendingBytes.addAndGet(-frame.length);
+            return false;
+        }
+        try {
+            w.execute(() -> {
+                try {
+                    o.write(frame);
+                    o.flush();
+                } catch (IOException | RuntimeException e) {
+                    // A failed write ends the connection; the reader notices and reports it.
+                    Socket s = socket;
+                    if (s != null) {
+                        try { s.close(); } catch (IOException ignored) { }
+                    }
+                } finally {
+                    pendingBytes.addAndGet(-frame.length);
+                }
+            });
+            return true;
+        } catch (RejectedExecutionException e) {
+            pendingBytes.addAndGet(-frame.length);
+            return false;
         }
     }
 
@@ -95,6 +132,8 @@ final class WebSocketClient {
             if (!closedByUs) reason = e;
         } finally {
             out = null;
+            ExecutorService w = writer;
+            if (w != null) w.shutdownNow();
             Socket s = socket;
             if (s != null) {
                 try { s.close(); } catch (IOException ignored) { }
@@ -104,15 +143,18 @@ final class WebSocketClient {
     }
 
     private void connectAndRead() throws Exception {
+        if (closedByUs) return;
         URI uri = new URI(wsUrl);
         boolean tls = "wss".equalsIgnoreCase(uri.getScheme());
         String host = uri.getHost();
+        if (host == null) throw new IOException("bad address");
         int port = uri.getPort() > 0 ? uri.getPort() : (tls ? 443 : 80);
         String path = uri.getRawPath() == null || uri.getRawPath().isEmpty() ? "/" : uri.getRawPath();
 
         Socket plain = new Socket();
         socket = plain;
         plain.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
+        if (closedByUs) return;
         plain.setSoTimeout(CONNECT_TIMEOUT_MS);
         Socket s = plain;
         if (tls) {
@@ -158,7 +200,13 @@ final class WebSocketClient {
         if (!WsFrames.acceptKey(key).equals(accept)) throw new IOException("bad Sec-WebSocket-Accept");
 
         s.setSoTimeout(READ_TIMEOUT_MS);
+        writer = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "HaWebSocketWriter");
+            t.setDaemon(true);
+            return t;
+        });
         out = rawOut;
+        if (closedByUs) return;
         listener.onOpen();
 
         while (!closedByUs) {

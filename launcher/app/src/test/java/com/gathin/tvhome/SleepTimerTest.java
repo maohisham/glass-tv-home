@@ -102,4 +102,20 @@ public class SleepTimerTest {
     public void subtractNeverExtendsATimerUnderOneMinute() {
         assertEquals(30_000L, SleepTimer.subtractedRemainingMs(30_000L, 5));
     }
+
+    @Test
+    public void defaultTimerStartsOnlyOncePerProcess() {
+        assertTrue(SleepTimer.shouldApplyDefault(false, false, 30));
+        assertFalse(SleepTimer.shouldApplyDefault(true, false, 30));
+    }
+
+    @Test
+    public void defaultTimerNeverReplacesARunningOne() {
+        assertFalse(SleepTimer.shouldApplyDefault(false, true, 30));
+    }
+
+    @Test
+    public void noDefaultMeansNoTimer() {
+        assertFalse(SleepTimer.shouldApplyDefault(false, false, 0));
+    }
 }

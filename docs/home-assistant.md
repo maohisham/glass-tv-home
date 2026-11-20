@@ -20,7 +20,8 @@ weekly places pictures. When it is on, the only place it talks to is the HA addr
 
 1. On the TV open Glass TV's **Launcher Settings** (long-press the Settings pill) → **Home Assistant**.
 2. **Address**: where HA is on your network, for example `http://homeassistant.local:8123`, or an
-   `https://` address. Plain `http://` is only accepted for addresses inside your home network (a private IP,
+   `https://` address. Without a port, `http` addresses use HA's usual `8123`. You can paste the address from
+   your browser: anything after the host (a dashboard page, a query) is dropped. Plain `http://` is only accepted for addresses inside your home network (a private IP,
    `localhost`, or a name ending in `.local` or `.lan`); anything on the internet must use `https://`.
 3. **Access token**: type it, or put it in a file and push it so you do not have to type about 180
    characters with a remote. Save the token as the only text in `ha-token.txt`, then push it into the app's files
@@ -49,7 +50,8 @@ Fire the event `glasstv_command` (from a script, an automation, or **Developer t
 | `timer.status` | not used | The TV reports its timer state right now. |
 
 Add `"device": "<name>"` to talk to one TV only; without it every linked TV obeys. Names are compared ignoring
-upper and lower case. Commands with a missing, zero, negative, fractional or text `minutes`, and commands the
+upper and lower case. `minutes` must be a whole number (`30` or `30.0` are both fine). Commands with a missing, zero, negative,
+fractional (`4.5`) or text `minutes`, and commands the
 launcher does not know, are ignored.
 
 When the timer reaches zero the TV goes to sleep, even if you are in another app.

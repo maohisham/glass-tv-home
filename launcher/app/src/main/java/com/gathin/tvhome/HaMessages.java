@@ -109,9 +109,10 @@ final class HaMessages {
         if (!(name instanceof String) || ((String) name).isEmpty()) return OTHER;
         int minutes = -1;
         Object m = data.opt("minutes");
-        if ((m instanceof Integer || m instanceof Long) && ((Number) m).longValue() > 0
-                && ((Number) m).longValue() <= Integer.MAX_VALUE) {
-            minutes = ((Number) m).intValue();
+        if (m instanceof Number) {
+            // A helper may send 30.0 for 30; accept a whole number however it is written, never 4.5.
+            double d = ((Number) m).doubleValue();
+            if (d >= 1 && d <= Integer.MAX_VALUE && d == Math.rint(d)) minutes = (int) d;
         }
         Object dev = data.opt("device");
         String device = dev instanceof String ? (String) dev : "";
