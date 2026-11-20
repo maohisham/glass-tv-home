@@ -144,3 +144,13 @@ Enabled but never bound points at a firmware restriction on auto-starting sidelo
 builds log `OP_AUTO_START` denials). Look at `logcat` for the binding failure before changing settings,
 and do not rewrite the enabled-services list or grant app-ops as a blanket fix. When reporting, give the
 model, build, current user and the relevant redacted lines, not the raw dump.
+
+## Home Assistant link does not connect
+
+The link is described in [home-assistant.md](home-assistant.md). Read the **Status** line under Launcher Settings → Home Assistant first.
+
+- **"Needs the Home key service"**: the link runs inside `HomeKeyService`. Switch it on in the TV's Accessibility settings, or reinstall with `HOME_KEY_SERVICE=1` (see "Accessibility helper enabled but the remote button does nothing" above if it turns itself off after a reboot).
+- **"Home Assistant rejected the access token"**: the token is wrong, expired or was deleted. Create a new long-lived token in your HA profile and enter it again; the launcher stops retrying until you change a setting.
+- **Stays on "Connecting…"**: check the address opens in a browser on the same network, includes the port (usually `:8123`), and that the TV is on the same network as HA. Plain `http://` is only accepted for private addresses, `localhost` and `.local` / `.lan` names; a public address must be `https://`, otherwise the launcher refuses to connect.
+- **Connected, but commands or state do nothing**: the token's HA user must be an administrator, because HA only lets administrators fire and listen to custom events. The launcher logs `Home Assistant refused a request` (`logcat -s TvHome.HaLink`). Also check the event name is exactly `glasstv_command` and that `device`, if given, matches the TV's device name.
+- **A timer from Home Assistant did not put the TV to sleep**: the Home key service must be running; it is what puts the TV to sleep when the timer ends.

@@ -233,7 +233,9 @@ A theme is a folder with `config.json` (and optional `wallpaper.jpg` or `wallpap
 - The original Clean Your TV guide lives in [docs/CLEANYOURTV-README.md](docs/CLEANYOURTV-README.md); the tests
   read its TV table and counts. Keep its relative links pointing one level up (`../`).
 - Keep the launcher light: no new background services, no network use but the weekly places pictures (none with
-  `"places": false`), one wallpaper bitmap
+  `"places": false`) and, only when the owner has set it up and switched it on, the link to their own Home
+  Assistant ([docs/home-assistant.md](docs/home-assistant.md); it lives in `HomeKeyService`, so it needs that
+  service), one wallpaper bitmap
   in memory, decoding off the main thread, nothing running while another app is in front.
 - Commits carry only the human author's identity. Don't add AI attribution lines.
 - Credit stays: this project is based on [Clean Your TV](https://github.com/Gathin23/cleanyourtv) by Gathin (MIT).

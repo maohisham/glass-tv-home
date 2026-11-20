@@ -41,6 +41,8 @@ every week.
   - **10 Minutes Idle**: Automatically engages an ambient StandBy screensaver with large 110sp numerals, Islamic Hijri calendar, next prayer capsule, and a late-night red monochrome wind-down mode.
   - **Sleep timer pill**: A moon-icon button in the top bar cycles through preset durations (15 / 30 / 60 / 120 min); a countdown overlay appears on screen and the TV turns off when it expires via `GLOBAL_ACTION_LOCK_SCREEN`. The timer and its overlay survive a device reboot — if a timer was active before restart, the overlay reappears as soon as the accessibility service reconnects.
 
+- **Home Assistant link (optional).** Start, change and cancel the sleep timer from Home Assistant, and see its state there. Off by default; set up once in Launcher Settings. See [docs/home-assistant.md](docs/home-assistant.md).
+
 - **Hide apps from your home screen.** Long-press any app tile and choose **Hide App** — it disappears from the grid instantly. Restore hidden apps from **Launcher Settings → Hidden Apps** at any time.
 
 - **Full app icon customisation.** Long-press any tile to:
