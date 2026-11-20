@@ -159,10 +159,27 @@ public class LauncherSettingsActivity extends Activity {
 
     private LinearLayout haStatusRow;
 
+    /** While this screen is open the Home Assistant status line follows the connection, once a second. */
+    private final Runnable haStatusTick = new Runnable() {
+        @Override public void run() {
+            refreshHaStatus();
+            if (haStatusRow != null) haStatusRow.postDelayed(this, 1000);
+        }
+    };
+
     @Override
     protected void onResume() {
         super.onResume();
-        refreshHaStatus();
+        if (haStatusRow != null) {
+            haStatusRow.removeCallbacks(haStatusTick);
+            haStatusRow.post(haStatusTick);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        if (haStatusRow != null) haStatusRow.removeCallbacks(haStatusTick);
+        super.onPause();
     }
 
     private void addHaSection(LinearLayout parent) {
@@ -204,7 +221,6 @@ public class LauncherSettingsActivity extends Activity {
 
     private void haChanged() {
         HaLink.get().onSettingsChanged();
-        if (haStatusRow != null) haStatusRow.postDelayed(this::refreshHaStatus, 1500);
     }
 
     private void refreshHaStatus() {
